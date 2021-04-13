@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.callInfo.full": false,
+    "rust-analyzer.inlayHints.chainingHints": false,
+    "rust-analyzer.inlayHints.enable": false,
+    "rust-analyzer.inlayHints.maxLength": 0,
+    "rust-analyzer.inlayHints.parameterHints": false,
+    "rust-analyzer.inlayHints.typeHints": false
+}
