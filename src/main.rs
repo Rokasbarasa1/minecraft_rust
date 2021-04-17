@@ -6,17 +6,27 @@ extern crate serde_json;
 extern crate glm;
 extern crate nalgebra_glm;
 pub mod render_gl;
+mod world;
 
 use std::{ffi::c_void};
 use std::ffi::CString;
 
 use image::{ImageBuffer, Rgb};
 
+enum Block{
+    Stone_block,
+    Dirt_block,
+    Grass_block
+}
+
+
 fn main() {
     //Settings
     //Current amount of textures
-    const AMOUNT_TEXTURES: usize =  4;
-    let square_chunk_width: u8 = 254;//16;
+    const amount_textures: usize =  4;
+    let square_chunk_width: u32 = 16;//16;
+    let block_radius: f32 = 0.3; 
+    let chunks_layers_from_player: u32 = 5;
     let window_width = 1500;
     let window_height = 1000;
 
@@ -27,7 +37,7 @@ fn main() {
 
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
-
+    
     let window = video_subsystem
         .window("RSMinecraft", window_width, window_height)
         .opengl()
@@ -46,7 +56,7 @@ fn main() {
 
     let mut yaw = -90.0;
     let mut pitch = 0.0;
-    let mut fov = 45.0;
+    let mut fov = 85.0;
 
     //Mouse state
     let mut first_mouse = true;
@@ -137,12 +147,11 @@ fn main() {
             }
         }
     }
-
     // set up vertex array object
     let mut vao: gl::types::GLuint = 0;
     let mut vbo: gl::types::GLuint = 0;
     let mut ebo: gl::types::GLuint = 0;
-    let mut loaded_textures: [gl::types::GLuint; AMOUNT_TEXTURES] = [0,0,0,0];
+    let mut loaded_textures: [gl::types::GLuint; amount_textures] = [0,0,0,0];
     unsafe {
 
         gl::GenBuffers(1, &mut vbo);
@@ -162,15 +171,15 @@ fn main() {
         gl::EnableVertexAttribArray(2);
         gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, (5 * std::mem::size_of::<f32>()) as gl::types::GLint, (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid,);
 
-        let mut data = image::open(&std::path::Path::new("C:\\Users\\Rokas\\Desktop\\rust minecraft\\minecraft_rust\\TextureTemplate.png")).unwrap().into_rgb();
-        let number: i32 = 1;
-        for i in 0..AMOUNT_TEXTURES {
-            let mut texture: gl::types::GLuint = 0;
-            gl::GenTextures(number, &mut texture);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            setup_texture(texture, i, &mut data);
-            loaded_textures[i] = texture;
-        }
+        // let mut data = image::open(&std::path::Path::new("C:\\Users\\Rokas\\Desktop\\rust minecraft\\minecraft_rust\\TextureTemplate.png")).unwrap().into_rgb();
+        // let number: i32 = 1;
+        // for i in 0..amount_textures {
+        //     let mut texture: gl::types::GLuint = 0;
+        //     gl::GenTextures(number, &mut texture);
+        //     gl::BindTexture(gl::TEXTURE_2D, texture);
+        //     setup_texture(texture, i, &mut data);
+        //     loaded_textures[i] = texture;
+        // }
 
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindVertexArray(0);
@@ -184,6 +193,9 @@ fn main() {
 
     let mut mesh = false;
     let mut time_increment: f32 = 0.0;
+    
+    let mut world: world::World = world::World::new(&amount_textures, &camera_pos, &square_chunk_width, &block_radius, &shader_program, &chunks_layers_from_player);
+    println!("{}", world::World::look_inside(&world));
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
         for event in event_pump.poll_iter() {
@@ -195,6 +207,7 @@ fn main() {
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
                         camera_pos = camera_pos + glm::vec3(camera_speed * camera_front.x, camera_speed * camera_front.y, camera_speed * camera_front.z);
                     }
+
                     //Change to polygon mesh mode
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Q {
                         unsafe {
@@ -207,7 +220,6 @@ fn main() {
                             }
                         }
                     }
-
 
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Escape {
                         break 'main;
@@ -273,6 +285,7 @@ fn main() {
         }     
         
         unsafe {
+            
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); 
             shader_program.set_used();
 
@@ -296,10 +309,7 @@ fn main() {
 
             gl::BindVertexArray(vao);
 
-            
-            for i in 0..cube_positions.len() {
-                render_object(cube_positions[i], shader_program.id().clone(), AMOUNT_TEXTURES, &loaded_textures, i);
-            }
+            world::World::render(&mut world, &camera_pos, &vao);
             gl::BindVertexArray(0);
 
         }
@@ -308,52 +318,4 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(10));
 
     }
-}
-
-pub fn render_object(cube_position: glm::Vector3<f32>, program: gl::types::GLuint, amount_textures: usize, loaded_textures: &[u32], i: usize){
-    unsafe{
-        gl::BindTexture(gl::TEXTURE_2D, loaded_textures[i % amount_textures]);
-        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  cube_position);
-        model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
-        let model_loc = gl::GetUniformLocation(program, "model".as_ptr() as *const std::os::raw::c_char);
-        gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-        gl::DrawArrays(
-            gl::TRIANGLES,
-            0,
-            36,
-        );
-    }
-}
-
-pub fn setup_texture(texture:  gl::types::GLuint, increment: usize, data: & mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
-    unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, texture);
-
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPLACE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT  as i32);
-
-        gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MIN_FILTER, gl::LINEAR  as i32);
-        gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MAG_FILTER, gl::LINEAR  as i32);
-
-        let cropped_images =  image::imageops::crop( data, 16*(increment as u32), 0, 16, 16).to_image();
-        let (width ,height) = cropped_images.dimensions();
-        let img_data = cropped_images.into_raw();
-        
-        let img_ptr: *const c_void = img_data.as_ptr() as *const c_void;
-        
-        gl::TexImage2D(
-            gl::TEXTURE_2D, 
-            0, 
-            gl::RGB as i32, 
-            width as i32, 
-            height as i32, 
-            0, 
-            gl::RGB, 
-            gl::UNSIGNED_BYTE, 
-            img_ptr
-        );
-
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-    }
-    
 }

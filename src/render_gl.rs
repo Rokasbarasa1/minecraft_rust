@@ -64,6 +64,10 @@ impl Program {
             gl::UseProgram(self.id);
         }
     }
+
+    pub fn clone(&self) -> Program{
+        return Program { id: self.id().clone() }
+    }
 }
 
 impl Drop for Program {
