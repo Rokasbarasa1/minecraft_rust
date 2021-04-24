@@ -16,3 +16,11 @@ serde_json = "1.0.64"
 error-chain = "0.12.4"
 glm = "0.2.3"
 nalgebra-glm = "0.11.0"
+imageproc = "0.22.0"
+stopwatch = "0.0.7"
+crossterm = "0.19.0"
+# firestorm = { version="0.4", features=["enable_system_time"] }
+# flamegraph = "0.4.0"
+
+[profile.release]
+debug = true
