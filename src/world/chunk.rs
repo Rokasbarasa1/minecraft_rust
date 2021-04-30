@@ -1,9 +1,5 @@
-use glm::Vector3;
-
 extern crate glm;
 pub mod block;
-
-
 pub struct Chunk {
     position: glm::Vector3<f32>,
     grid_x: i32,
@@ -16,7 +12,9 @@ impl Chunk{
         let end_position = glm::vec3(position.x - (*square_chunk_width as f32 /2.0 * block_radius), position.y, position.z - (*square_chunk_width as f32 /2.0 * block_radius));
         let mut x_pos = position.x.clone();
         let mut z_pos = position.z.clone();
+        let mut y_pos = position.y.clone();
         let x_pos_temp = position.x.clone();
+        let y_pos_temp = position.y.clone();
 
         let mut blocks: Vec<Vec<Vec<block::Block>>> = vec![];
         for i in 0..*square_chunk_width as usize {  //Z line Go from positive to negative
@@ -25,17 +23,14 @@ impl Chunk{
             for k in 0..*square_chunk_width as usize { //X line go from positive to negative
                 let row: Vec<block::Block> = vec![];
                 blocks[i].push(row);
-                for j in 0..1{
+                for j in 0..10{
                     //Maybe later do air rendering 
-                    let number = k % 4;
-                    // match number {
-                    //     0 => id = block::BlockId::DIRT,
-                    //     1 => id = block::BlockId::STONE,
-                    //     2 => id = block::BlockId::GRASS,
-                    //     _ => println!("Lala")
-                    // }
-                    blocks[i][k].push(block::Block::init(glm::vec3(x_pos * block_radius, position.y * block_radius, z_pos * block_radius), number as u32));
+                    let mut number = j%4;//k % 4;
+
+                    blocks[i][k].push(block::Block::init(glm::vec3(x_pos * block_radius, y_pos * block_radius, z_pos * block_radius), number as u32));
+                    y_pos += 1.0;
                 }
+                y_pos = y_pos_temp;
                 x_pos -= 1.0;
                 
             }
@@ -54,7 +49,9 @@ impl Chunk{
     pub fn render(&self, loaded_textures: &Vec<u32>, program: &gl::types::GLuint){
         for i in 0..self.blocks.len() {
             for k in 0..self.blocks[i].len() {
-                block::Block::render(&self.blocks[i][k][0], loaded_textures, program);
+                for j in 0..self.blocks[i][k].len() {
+                    block::Block::render(&self.blocks[i][k][j], loaded_textures, program);
+                }
             }
         }
     }
@@ -75,7 +72,7 @@ impl Chunk{
             copy_chunk.blocks.push(vec![]);
             for k in 0..self.blocks[i].len() {
                 copy_chunk.blocks[i].push(vec![]);
-                for j in 0..1{
+                for j in 0..self.blocks[i][k].len(){
                     copy_chunk.blocks[i][k].push(block::Block::copy(&self.blocks[i][k][j]));
                 }
             }
@@ -91,5 +88,12 @@ impl Chunk{
             return false;
         }
     }
-}
 
+    pub fn get_blocks_vector(&self) -> &Vec<Vec<Vec<block::Block>>> {
+        return &self.blocks;
+    }
+
+    pub fn get_blocks_vector_mutable(&mut self) -> &mut Vec<Vec<Vec<block::Block>>> {
+        return &mut self.blocks;
+    }
+}

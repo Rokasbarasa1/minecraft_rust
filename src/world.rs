@@ -7,21 +7,16 @@ extern crate glm;
 extern crate nalgebra_glm;
 extern crate imageproc;
 pub mod chunk;
-
 use std::{ffi::c_void};
-
-use nalgebra_glm::pow;
-
 use crate::render_gl;
-trait IWorld{
-    fn new(amount_textures: usize, camera_position: &glm::Vector3<f32>, square_chunk_width: &u32, block_radius: f32);
-    //fn render(&self, camera_position: &glm::Vector3<f32>);
-}
+use self::chunk::block;
+use block::Block;
+use chunk::Chunk;
 
 pub struct World {
     loaded_textures: Vec<gl::types::GLuint>,
-    chunk_grid: Vec<Vec<chunk::Chunk>>,
-    visible_chunk_grid: Vec<chunk::Chunk>,
+    chunk_grid: Vec<Vec<Chunk>>,
+    visible_chunk_grid: Vec<Chunk>,
     square_chunk_width: u32,
     chunks_layers_from_player: u32,
     block_radius: f32,
@@ -46,9 +41,6 @@ impl World{
             loaded_textures.push(texture);
         }
 
-
-
-
         //LOAD TERRAIN MAP
 
         let mut image = image::ImageBuffer::<image::Rgb<u8>, Vec<u8> >::new(1000, 1000);
@@ -56,16 +48,17 @@ impl World{
         imageproc::noise::gaussian_noise(&image, -1.0, 100.0, 1115);
         image.save("output.png").unwrap();
 
-
-
         //LOAD TERRAIN
-        let mut visible_chunk_grid: Vec<chunk::Chunk> = vec![];
-        let mut chunk_grid: Vec<Vec<chunk::Chunk>> = vec![];
+
+        let visible_chunk_grid: Vec<Chunk> = vec![];
+        let mut chunk_grid: Vec<Vec<Chunk>> = vec![];
         generate_chunks(&mut chunk_grid, camera_position, square_chunk_width, &block_radius, chunks_layers_from_player);
 
+        //VALIDATE VISIBILITY GO TO CHUNK TO VALIDATE
 
+        check_visibility(&mut chunk_grid);
 
-        let mut world = World{
+        let world = World{
             loaded_textures: loaded_textures,
             chunk_grid: chunk_grid,
             square_chunk_width: square_chunk_width.clone(),
@@ -79,62 +72,27 @@ impl World{
     }
 
     pub fn render(&mut self, camera_position: &glm::Vector3<f32>, vao: &gl::types::GLuint){
-        // self.visible_chunk_grid.retain(|&chunk| {
-        //     self.view_distance < distance_between_points(camera_position, chunk::Chunk::get_position(chunk))
-        // });
         let mut keep = vec![];
         for i in 0..self.visible_chunk_grid.len() {
-            let position_chunk = chunk::Chunk::get_position(&self.visible_chunk_grid[i]);
-            //if (camera_position.x - position_chunk.x) > self.view_distance || (camera_position.z - position_chunk.z) > self.view_distance || (camera_position.y - position_chunk.y) > self.view_distance{
-            if self.view_distance < distance_between_points(camera_position, chunk::Chunk::get_position(&self.visible_chunk_grid[i])){
+            if self.view_distance < distance_between_points(camera_position, Chunk::get_position(&self.visible_chunk_grid[i])){
                 keep.push(false);
-                //self.visible_chunk_grid.remove(i);
             }else{
                 keep.push(true);
             }
         }
         let mut i = 0;
         self.visible_chunk_grid.retain(|_| (keep[i], i += 1).0);
-        // self.visible_chunk_grid.retain(|&chunk| {
-        //     self.view_distance < distance_between_points(camera_position, chunk::Chunk::get_position(chunk))
-        // });
-        //self.visible_chunk_grid.clear();
-        
+
         for i in 0..self.chunk_grid.len() {
             for k in 0..self.chunk_grid[i].len() {
                 if !contains(&self.visible_chunk_grid, &self.chunk_grid[i][k]) {
-                    let position_chunk = chunk::Chunk::get_position(&self.chunk_grid[i][k]);
-                    //if (camera_position.x - position_chunk.x) < self.view_distance || (camera_position.z - position_chunk.z) < self.view_distance || (camera_position.y - position_chunk.y) < self.view_distance{
-                    if self.view_distance > distance_between_points(camera_position, chunk::Chunk::get_position(&self.chunk_grid[i][k])){
-                        self.visible_chunk_grid.push(chunk::Chunk::copy(&self.chunk_grid[i][k]));
+                    if self.view_distance > distance_between_points(camera_position, Chunk::get_position(&self.chunk_grid[i][k])){
+                        self.visible_chunk_grid.push(Chunk::copy(&self.chunk_grid[i][k]));
                     }
                 }
             }
         }
 
-        // let current_chunk_x = camera_position.x % self.square_chunk_width as f32 * self.block_radius + 0.5;
-        // let current_chunk_z = camera_position.z % self.square_chunk_width as f32 * self.block_radius - 0.5;
-        
-        // println!("{}", current_chunk_x);  
-        // println!("{} \n\n", current_chunk_z);
-        // if current_chunk_x >= 1.0 {
-        //     for i in 0..self.chunk_grid.len() {
-        //         for k in 0..self.chunk_grid[i].len() {
-        //             if i % self.chunks_layers_from_player as usize  == 0 {
-        //                 self.chunk_grid[i] = vec![];
-        //             }
-        //         }
-        //     }
-        //    //Render chunks in X direction and remove in opposite end 
-        // } else if current_chunk_x <= 0.0{
-        //     //Render chunks in x direction and remove in opposite end 
-        // }
-    
-        // if current_chunk_z >= 1.0 {
-        //     //Render chunks in z direction and remove in opposite end 
-        // } else if current_chunk_z <= 0.0{
-        //     //Render chunks in z direction and remove in opposite end 
-        // }
         self.program.set_used();
 
         unsafe{
@@ -142,17 +100,12 @@ impl World{
         }
 
         for i in 0..self.visible_chunk_grid.len() {
-            chunk::Chunk::render(&self.visible_chunk_grid[i], &self.loaded_textures, &self.program.id());
+            Chunk::render(&self.visible_chunk_grid[i], &self.loaded_textures, &self.program.id());
         } 
-        // for i in 0..self.chunk_grid.len() {
-        //     for k in 0..self.chunk_grid[i].len() {
-        //         chunk::Chunk::render(&self.chunk_grid[i][k], &self.loaded_textures, &self.program.id());
-        //     }
-        // }
     }
 }
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<chunk::Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &u32, block_radius: &f32, render_out_from_player: &u32){
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &u32, block_radius: &f32, render_out_from_player: &u32){
     let half_chunk_width = (*square_chunk_width as f32 / 2.0).floor();
     let mut x_pos = camera_position.x + half_chunk_width + (*render_out_from_player as f32 * *square_chunk_width as f32);
     let mut z_pos = camera_position.z + half_chunk_width + (*render_out_from_player as f32 * *square_chunk_width as f32);
@@ -162,16 +115,24 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<chunk::Chunk>>, camera_position: &gl
     if square_chunk_width % 2 == 1 {
         width_adjust = 1;
     }
-    for i in 0..(*render_out_from_player * 2 - width_adjust) as usize {  //Z line Go from positive to negative
-        let mut collumn: Vec<chunk::Chunk> = vec![];
+
+    let chunk_widht;
+    if *render_out_from_player == 1 {
+        chunk_widht = 1;
+    }else{
+        chunk_widht = *render_out_from_player * 2 - width_adjust
+    };
+    for i in 0..chunk_widht.clone() as usize {  //Z line Go from positive to negative
+        let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
-        for k in 0..(*render_out_from_player * 2 - width_adjust) as usize {  //Z line Go from positive to negative
+        for k in 0..chunk_widht.clone() as usize {  //Z line Go from positive to negative
             chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -4.0, z_pos.clone()), square_chunk_width, block_radius));
             x_pos -= *square_chunk_width as f32;
         }
         x_pos = x_pos_temp;
         z_pos -= *square_chunk_width as f32 ;
     }
+    println!(" ")
 }
 
 fn setup_texture(texture:  gl::types::GLuint, increment: usize, data: & mut image::ImageBuffer<image::Rgba<u8>, Vec<u8>>) {
@@ -212,11 +173,179 @@ fn distance_between_points(point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32
     //COULD ALSO USE JUST X AND Z TO MAKE THE RENDERED SPACE A CUBE
 }
 
-fn contains(list: &Vec<chunk::Chunk>,chunk: &chunk::Chunk) -> bool{
+fn contains(list: &Vec<Chunk>,chunk: &Chunk) -> bool{
     for i in 0..list.len() {
         if chunk::Chunk::compare(chunk, &list[i]) {
             return true;
         }
     }
     return false;
+}
+
+fn check_visibility(chunk_grid: &mut Vec<Vec<Chunk>>){
+    let jSize = Chunk::get_blocks_vector(&mut chunk_grid[0][0]).len();
+
+    let mut index: u128 = 0;
+    for i in 0..chunk_grid.len() {
+        for k in 0..chunk_grid[i].len() {
+            for j in 0..Chunk::get_blocks_vector(&mut chunk_grid[i][k]).len() {
+                for l in 0..Chunk::get_blocks_vector(&mut chunk_grid[i][k])[j].len() {
+                    for m in 0..Chunk::get_blocks_vector(&mut chunk_grid[i][k])[j][l].len() {
+                        // println!("Iteration: {}", index);
+                        // if index ==  241{
+                        //     println!("Were here boys");
+                        // }
+                        check_block_sides(chunk_grid , i.clone(), k.clone(), j.clone(), l.clone(), m.clone(), jSize.clone());
+                        //index += 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: usize, l: usize, m: usize, chunk_width: usize){
+    if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m]) {
+        Block::set_invisiblie(&mut Chunk::get_blocks_vector_mutable(&mut chunk_grid[i][k])[j][l][m])
+    }
+    else {
+        let zChunkFlag: u32; 
+        if i == 0 { zChunkFlag = 0 }else if i == chunk_grid.len()-1 { zChunkFlag = 2 } else { zChunkFlag = 1 }; //Z axis
+        let xChunkFlag: u32; 
+        if k == 0 { xChunkFlag = 0 }else if k == chunk_grid.len()-1 { xChunkFlag = 2 } else { xChunkFlag = 1 }; //X axis
+
+        let zBlockFlag: u32; 
+        if j == 0 { zBlockFlag = 0 }else if j == chunk_width-1 { zBlockFlag = 2 } else { zBlockFlag = 1 }; //Z axis
+        let xBlockFlag: u32; 
+        if l == 0 { xBlockFlag = 0 }else if l == chunk_width-1 { xBlockFlag = 2 } else { xBlockFlag = 1 }; //X axis
+        let yBlockFlag: u32; 
+        if m == 0 { yBlockFlag = 0 }else if m == Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l].len()-1 { yBlockFlag = 2 } else { yBlockFlag = 1 }; //Y axis
+
+        // I = Z chunk, K = X chunk, J = Z block, L = X block, M = Y block
+        let mut sides: Vec<bool> = vec![];
+
+        // //Z block go +
+        if zBlockFlag == 2{
+            if zChunkFlag == 2 || chunk_grid.len()-1 == 0 && zChunkFlag == 0{
+                sides.push(true); // No block there bcs edge of chunks
+            }else{
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i+1][k])[0][l][m]) { 
+                    sides.push(true); 
+                }else {
+                    sides.push(false); 
+                }
+            }
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j+1][l][m]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+        // Z block go -
+        if zBlockFlag == 0{
+            if zChunkFlag == 0{
+                sides.push(true); // No block there bcs edge of chunks
+            }else{
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i-1][k])[chunk_width-1][l][m]) { 
+                    sides.push(true); 
+                }else {
+                    sides.push(false); 
+                }
+            }
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j-1][l][m]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+
+        // X block go +
+        //Check if end of chunk if 2 it is end of chunk
+        if xBlockFlag == 2{
+            //Check if end of chunks was == 2 before
+            if xChunkFlag == 2 || chunk_grid.len()-1 == 0 && xChunkFlag == 0{
+                sides.push(true); // No block there bcs edge of chunks
+            }else{
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k+1])[j][0][m]) { 
+                    sides.push(true); 
+                }else {
+                    sides.push(false); 
+                }
+            }
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l+1][m]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+        // X block go -
+        if xBlockFlag == 0{
+            if xChunkFlag == 0{
+                sides.push(true); // No block there bcs edge of chunks
+            }else{
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k-1])[j][chunk_width-1][m]) { 
+                    sides.push(true); 
+                }else {
+                    sides.push(false); 
+                }
+            }
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l-1][m]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+
+
+        //sides.push(true);
+        // Y block go -
+        if yBlockFlag == 0{
+            sides.push(true);
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&mut chunk_grid[i][k])[j][l][m-1]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+        //sides.push(true);
+        // Y block go +
+        if yBlockFlag == 2 || 0 == Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l].len()-1{
+            sides.push(true); // y axis has no more chunks bro
+        }else{
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m+1]) { 
+                sides.push(true); 
+            }else {
+                sides.push(false); 
+            }
+        }
+
+
+
+        //Assigning invisible or visisble
+        let mut visible: u8 = 0;
+        for i in 0..sides.len(){
+            if sides[i] == true {
+                visible += 1;
+            }
+            // if i == 5 && sides[i] == true {
+            //     println!("Were here again boys");
+            // }
+        }
+        
+        if visible > 0{
+            Block::set_visibility_vector(&mut Chunk::get_blocks_vector_mutable(&mut chunk_grid[i][k])[j][l][m], sides);            
+        }else{
+            Block::set_invisiblie(&mut Chunk::get_blocks_vector_mutable(&mut chunk_grid[i][k])[j][l][m])
+        }
+    } 
 }

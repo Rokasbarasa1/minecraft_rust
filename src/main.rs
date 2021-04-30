@@ -6,32 +6,10 @@ extern crate serde_json;
 extern crate glm;
 extern crate nalgebra_glm;
 extern crate stopwatch;
-
-use std::io::{stdout, Write};
-
-use crossterm::{
-    execute,
-    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-    ExecutableCommand, Result,
-    event,
-};
-
 pub mod render_gl;
 pub mod world;
-
-
-
-// use std::{ffi::c_void};
 use std::ffi::CString;
-
-// use image::{ImageBuffer, Rgb};
-
-// enum Block{
-//     Stone_block,
-//     Dirt_block,
-//     Grass_block
-// }
-
+use std::io::{stdout, Write};
 
 fn main() {
     //Settings
@@ -39,7 +17,7 @@ fn main() {
     const AMOUNT_TEXTURES: usize =  4;
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
     const BLOCK_RADIUS: f32 = 0.3; 
-    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 10; //Actualy its the width of the rendered area in chunks // HAve it as odd number
+    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 2; //Actualy its the width of the rendered area in chunks // HAve it as odd number
     const WINDOW_WIDTH: u32 = 1500;
     const WINDOW_HEIGHT: u32 = 1000;
     const VIEW_DISTANCE: f32 = 50.0;
@@ -97,7 +75,7 @@ fn main() {
     let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
 
     let vertices: Vec<f32> = vec![
-        // Back face
+    // Back face
    -0.15, -0.15, -0.15,  0.0, 0.0, // Bottom-left
     0.15,  0.15, -0.15,  1.0, 1.0, // top-right
     0.15, -0.15, -0.15,  1.0, 0.0, // bottom-right         
@@ -312,22 +290,22 @@ fn main() {
         }
         time_increment += 0.02;
         window.gl_swap_window();
-        // let mut x_axis = f32::abs(camera_front.x);
-        // let mut y_axis = f32::abs(camera_front.y);
-        // let mut z_axis = f32::abs(camera_front.z);
-        // let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
-        // let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
-        // let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
+        let mut x_axis = f32::abs(camera_front.x);
+        let mut y_axis = f32::abs(camera_front.y);
+        let mut z_axis = f32::abs(camera_front.z);
+        let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
+        let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
+        let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
 
-        // if(x_axis > y_axis && x_axis > z_axis){
-        //     println!("Axis: {}X",x_sign);
-        // }else if(y_axis > x_axis && y_axis > z_axis){
-        //     println!("Axis: {}Y",y_sign);
-        // }else if(z_axis > y_axis && z_axis > x_axis){
-        //     println!("Axis: {}Z",z_sign);
-        // }
+        if(x_axis > y_axis && x_axis > z_axis){
+            println!("Axis: {}X",x_sign);
+        }else if(y_axis > x_axis && y_axis > z_axis){
+            println!("Axis: {}Y",y_sign);
+        }else if(z_axis > y_axis && z_axis > x_axis){
+            println!("Axis: {}Z",z_sign);
+        }
         // stopwatch::Stopwatch::stop(&mut stopwatch);
-        // print!("   TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
+        // print!(" TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
         // stopwatch::Stopwatch::reset(&mut stopwatch);
         
         std::thread::sleep(std::time::Duration::from_millis(10));
