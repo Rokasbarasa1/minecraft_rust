@@ -16,13 +16,13 @@ pub enum BlockId{
 
 pub struct Block {
     position: glm::Vector3<f32>,
-    id: u32,
+    id: u8,
     visible: bool,
     sides: Vec<bool>
 }
 
 impl Block {
-    pub fn init(position: glm::Vector3<f32>, id: u32) -> Block{
+    pub fn init(position: glm::Vector3<f32>, id: u8) -> Block{
         let cube_sides: Vec<bool> = vec![];
         return Block{
             position,
@@ -52,6 +52,14 @@ impl Block {
                 let mut index = 0;
                 for i in 0..self.sides.len() {
                     if self.sides[i] == true{
+                        if self.id == 3 && i == 5 {
+                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[0]);
+                        } else if self.id == 3 && i != 5 && i != 4{
+                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[3]);
+                        } else if self.id == 3{
+                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[2]);
+                        }
+                        
                         gl::DrawArrays(
                             gl::TRIANGLES,
                             index,
@@ -60,12 +68,6 @@ impl Block {
                     }
                     index += 6;
                 }
-                
-                // gl::DrawArrays(
-                //     gl::TRIANGLES,
-                //     30,
-                //     6,
-                // );
             }
         }
     }
@@ -83,3 +85,4 @@ impl Block {
         return self.id == 0;
     }
 }
+

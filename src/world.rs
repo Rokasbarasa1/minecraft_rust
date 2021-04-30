@@ -6,6 +6,7 @@ extern crate serde_json;
 extern crate glm;
 extern crate nalgebra_glm;
 extern crate imageproc;
+extern crate perlin_noise;
 pub mod chunk;
 use std::{ffi::c_void};
 use crate::render_gl;
@@ -42,7 +43,10 @@ impl World{
         }
 
         //LOAD TERRAIN MAP
+        let perlin = perlin_noise::PerlinNoise::new();
+        println!("{}",perlin.get2d([12.0,32.0]));
 
+        
         let mut image = image::ImageBuffer::<image::Rgb<u8>, Vec<u8> >::new(1000, 1000);
         *image.get_pixel_mut(5, 5) = image::Rgb([255,255,255]);        
         imageproc::noise::gaussian_noise(&image, -1.0, 100.0, 1115);
@@ -126,7 +130,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vect
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_widht.clone() as usize {  //Z line Go from positive to negative
-            chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -4.0, z_pos.clone()), square_chunk_width, block_radius));
+            chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, block_radius));
             x_pos -= *square_chunk_width as f32;
         }
         x_pos = x_pos_temp;

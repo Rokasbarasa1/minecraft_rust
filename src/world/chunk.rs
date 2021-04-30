@@ -23,11 +23,18 @@ impl Chunk{
             for k in 0..*square_chunk_width as usize { //X line go from positive to negative
                 let row: Vec<block::Block> = vec![];
                 blocks[i].push(row);
-                for j in 0..10{
+                for j in 0..11{
                     //Maybe later do air rendering 
-                    let mut number = j%4;//k % 4;
+                    let number: u32;
+                    if(j <= 7){
+                        number = 1;
+                    }else if j >= 8 && j >= 10{
+                        number = 3;
+                    } else {
+                        number = 2;
+                    }
 
-                    blocks[i][k].push(block::Block::init(glm::vec3(x_pos * block_radius, y_pos * block_radius, z_pos * block_radius), number as u32));
+                    blocks[i][k].push(block::Block::init(glm::vec3(x_pos * block_radius, y_pos * block_radius, z_pos * block_radius), number as u8));
                     y_pos += 1.0;
                 }
                 y_pos = y_pos_temp;
@@ -96,4 +103,9 @@ impl Chunk{
     pub fn get_blocks_vector_mutable(&mut self) -> &mut Vec<Vec<Vec<block::Block>>> {
         return &mut self.blocks;
     }
+
+}
+
+fn make_perlin_noise_map(x_width: u32, z_width: u32){
+    
 }
