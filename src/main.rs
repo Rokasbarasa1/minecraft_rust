@@ -1,11 +1,9 @@
 extern crate gl;
 extern crate sdl2;
-extern crate stb_image;
-extern crate image;
-extern crate serde_json;
 extern crate glm;
-extern crate nalgebra_glm;
 extern crate stopwatch;
+extern crate noise;
+use noise::{Perlin, Seedable};
 pub mod render_gl;
 pub mod world;
 use std::ffi::CString;
@@ -17,11 +15,16 @@ fn main() {
     const AMOUNT_TEXTURES: usize =  4;
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
     const BLOCK_RADIUS: f32 = 0.3; 
-    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 2; //Actualy its the width of the rendered area in chunks // HAve it as odd number
+    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 4; //Actualy its the width of the rendered area in chunks // HAve it as odd number
     const WINDOW_WIDTH: u32 = 1500;
     const WINDOW_HEIGHT: u32 = 1000;
     const VIEW_DISTANCE: f32 = 50.0;
+    const WORLD_GEN_SEED: u32 = 60;
+    const MAX_HEIGHT: usize = 20;
+
     let mut mesh = false;
+    let noise = Perlin::new();
+    noise.set_seed(WORLD_GEN_SEED);
 
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
@@ -41,9 +44,7 @@ fn main() {
     
     let _gl_context = window.gl_create_context().unwrap();
     let _gl = gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
-    // let window_init = init_window(WINDOW_WIDTH.clone(), WINDOW_HEIGHT.clone());
-    // let window = window_init.0;
-    // let sdl = window_init.1;
+
     //Camera
     let mut camera_pos = glm::vec3(0.0, 0.0, 0.0);
     let mut camera_front = glm::vec3(0.0, 0.0, -1.0);
@@ -162,9 +163,21 @@ fn main() {
     let mut time_increment: f32 = 0.0;
     let mut stopwatch = stopwatch::Stopwatch::new();
     stopwatch::Stopwatch::start(&mut stopwatch);
-    let mut world: world::World = world::World::new(&AMOUNT_TEXTURES, &(camera_pos / BLOCK_RADIUS), &SQUARE_CHUNK_WIDTH, &BLOCK_RADIUS, &shader_program, &CHUNKS_LAYERS_FROM_PLAYER, &VIEW_DISTANCE);
+    let mut world: world::World = world::World::new(
+        &AMOUNT_TEXTURES, 
+        &(camera_pos / BLOCK_RADIUS), 
+        &SQUARE_CHUNK_WIDTH, 
+        &BLOCK_RADIUS, 
+        &shader_program, 
+        &CHUNKS_LAYERS_FROM_PLAYER, 
+        &VIEW_DISTANCE, 
+        &noise,
+        &MAX_HEIGHT
+    );
     print!("   TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
-    stopwatch::Stopwatch::reset(&mut stopwatch);
+    stopwatch::Stopwatch::stop(&mut stopwatch);
+
+
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
         for event in event_pump.poll_iter() {
@@ -267,7 +280,6 @@ fn main() {
         unsafe {
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); 
-            shader_program.set_used();
 
             let current_frame = time_increment as f32;
             delta_time = current_frame - last_frame;
@@ -281,8 +293,6 @@ fn main() {
             let view_loc = gl::GetUniformLocation(shader_program.id(), "view".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
-            gl::BindVertexArray(vao);
-
             world::World::render(&mut world, &(camera_pos / BLOCK_RADIUS), &vao);
 
             gl::BindVertexArray(0);
@@ -290,27 +300,24 @@ fn main() {
         }
         time_increment += 0.02;
         window.gl_swap_window();
-        let mut x_axis = f32::abs(camera_front.x);
-        let mut y_axis = f32::abs(camera_front.y);
-        let mut z_axis = f32::abs(camera_front.z);
-        let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
-        let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
-        let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
+        // let mut x_axis = f32::abs(camera_front.x);
+        // let mut y_axis = f32::abs(camera_front.y);
+        // let mut z_axis = f32::abs(camera_front.z);
+        // let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
+        // let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
+        // let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
 
-        if(x_axis > y_axis && x_axis > z_axis){
-            println!("Axis: {}X",x_sign);
-        }else if(y_axis > x_axis && y_axis > z_axis){
-            println!("Axis: {}Y",y_sign);
-        }else if(z_axis > y_axis && z_axis > x_axis){
-            println!("Axis: {}Z",z_sign);
-        }
+        // if(x_axis > y_axis && x_axis > z_axis){
+        //     println!("Axis: {}X",x_sign);
+        // }else if(y_axis > x_axis && y_axis > z_axis){
+        //     println!("Axis: {}Y",y_sign);
+        // }else if(z_axis > y_axis && z_axis > x_axis){
+        //     println!("Axis: {}Z",z_sign);
+        // }
         // stopwatch::Stopwatch::stop(&mut stopwatch);
         // print!(" TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
         // stopwatch::Stopwatch::reset(&mut stopwatch);
         
         std::thread::sleep(std::time::Duration::from_millis(10));
-        //println!("");
-        //Previous = 10
-        //break;
     }
 }

@@ -1,11 +1,4 @@
 extern crate gl;
-extern crate sdl2;
-extern crate stb_image;
-extern crate image;
-extern crate serde_json;
-extern crate glm;
-extern crate nalgebra_glm;
-extern crate imageproc;
 
 pub enum BlockId{
     AIR = 0,
