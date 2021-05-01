@@ -7,7 +7,7 @@ use noise::{Perlin, Seedable};
 pub mod render_gl;
 pub mod world;
 use std::ffi::CString;
-use std::io::{stdout, Write};
+//use std::io::{stdout, Write};
 
 fn main() {
     //Settings
@@ -69,9 +69,9 @@ fn main() {
     sdl.mouse().set_relative_mouse_mode(true);
 
     // set up shader program
-    let vert_shader = render_gl::Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap()).unwrap();
+    let vert_shader = render_gl::Shader::from_vert_source(&CString::new(include_str!("shaders/triangle.vert")).unwrap()).unwrap();
 
-    let frag_shader = render_gl::Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap()).unwrap();
+    let frag_shader = render_gl::Shader::from_frag_source(&CString::new(include_str!("shaders/triangle.frag")).unwrap()).unwrap();
 
     let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
 
