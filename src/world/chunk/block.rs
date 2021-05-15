@@ -1,21 +1,24 @@
-extern crate gl;
+use crate::world::block_model::BlockModel;
 
+extern crate gl;
 pub enum BlockId{
-    AIR = 0,
+    
+    GRASS = 0,
     STONE = 1,
     DIRT = 2,
-    GRASS = 3
+    WATER = 3,
+    AIR = 240,
 }
 
 pub struct Block {
     position: glm::Vector3<f32>,
-    id: u8,
+    id: usize,
     visible: bool,
     sides: Vec<bool>
 }
 
 impl Block {
-    pub fn init(position: glm::Vector3<f32>, id: u8) -> Block{
+    pub fn init(position: glm::Vector3<f32>, id: usize) -> Block{
         let cube_sides: Vec<bool> = vec![];
         return Block{
             position,
@@ -27,39 +30,98 @@ impl Block {
 
     pub fn set_visibility_vector(&mut self, cube_sides: Vec<bool>){
         self.sides = cube_sides;
+        self.visible = true;
     }
 
     pub fn set_invisiblie(&mut self){
         self.visible = false;
     }
 
-    pub fn render(&self, loaded_textures: &Vec<u32>, program: &gl::types::GLuint){
-        if self.visible == true {
-            unsafe {
-                gl::BindTexture(gl::TEXTURE_2D, loaded_textures[self.id as usize]);
-
-                let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  self.position);
-                model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
-                let model_loc = gl::GetUniformLocation(program.clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                let mut index = 0;
-                for i in 0..self.sides.len() {
-                    if self.sides[i] == true{
-                        if self.id == 3 && i == 5 {
-                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[0]);
-                        } else if self.id == 3 && i != 5 && i != 4{
-                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[3]);
-                        } else if self.id == 3{
-                            gl::BindTexture(gl::TEXTURE_2D, loaded_textures[2]);
-                        }
-                        
-                        gl::DrawArrays(
-                            gl::TRIANGLES,
-                            index,
-                            6,
-                        );
+    pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, glm::Vec3)>, block_model: &BlockModel){
+        if self.id != 240 && self.visible {
+            for i in 0..self.sides.len() {
+                if self.sides[i] == true{
+                    match i {
+                        0 => for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_px(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_px(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_px(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_px_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        1 => for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_nx(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_nx(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_nx(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_nx_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        2 =>for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_py(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_py(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_py(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_py_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        3 => for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_ny(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_ny(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_ny(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_ny_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        4 => for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_pz(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_pz(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_pz(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_pz_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        5 => for n in 0..6{
+                                vertices.push(
+                                    (
+                                        glm::vec3(
+                                            BlockModel::get_nz(block_model)[n].x + self.position.x, 
+                                            BlockModel::get_nz(block_model)[n].y + self.position.y, 
+                                            BlockModel::get_nz(block_model)[n].z + self.position.z
+                                        ),
+                                        BlockModel::get_nz_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_normals(block_model)[n]
+                                    )
+                                )
+                            },
+                        _ => println!("Bad block")
                     }
-                    index += 6;
                 }
             }
         }
@@ -75,7 +137,23 @@ impl Block {
     }
     
     pub fn is_air(&self) -> bool{
-        return self.id == 0;
+        return self.id == 240;
+    }
+
+    pub fn is_air_or_water(&self) -> bool{
+        return self.id == 240 || self.id == 3;
+    }
+
+    pub fn is_visible(&self) -> bool{
+        return self.visible;
+    }
+
+    pub fn get_position(&self) -> &glm::Vector3<f32>{
+        return &self.position;
+    }
+
+    pub fn set_block_id(&mut self, new_id: usize){
+        self.id = new_id;
     }
 }
 

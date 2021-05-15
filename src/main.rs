@@ -3,45 +3,48 @@ extern crate sdl2;
 extern crate glm;
 extern crate stopwatch;
 extern crate noise;
-use noise::{Perlin, Seedable};
 pub mod render_gl;
 pub mod world;
 use std::ffi::CString;
 //use std::io::{stdout, Write};
 
+
+//$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
     //Current amount of textures
-    const AMOUNT_TEXTURES: usize =  4;
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
-    const BLOCK_RADIUS: f32 = 0.3; 
-    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 4; //Actualy its the width of the rendered area in chunks // HAve it as odd number
-    const WINDOW_WIDTH: u32 = 1500;
-    const WINDOW_HEIGHT: u32 = 1000;
-    const VIEW_DISTANCE: f32 = 50.0;
+    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 8; //Odd numbers
+    const WINDOW_WIDTH: u32 = 600;
+    const WINDOW_HEIGHT: u32 = 600;
+    const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 20;
+    const MAX_HEIGHT: usize = 40;
 
+    //Some booleans that in game keys control
     let mut mesh = false;
-    let noise = Perlin::new();
-    noise.set_seed(WORLD_GEN_SEED);
+    let mut mouse_button_clicked = false;
+    let mut keyboard_w = false;
+    let mut keyboard_a = false;
+    let mut keyboard_s = false;
+    let mut keyboard_d = false;
+    let mut keyboard_space = false;
+    let mut keyboard_ctrl = false;
+
+    // let noise = Perlin::new();
+    // noise.set_seed(WORLD_GEN_SEED);
 
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
-
     let gl_attr = video_subsystem.gl_attr();
-
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
-    
     let window = video_subsystem
         .window("MinecraftRS", WINDOW_WIDTH, WINDOW_HEIGHT)
         .opengl()
         .resizable()
         .build()
         .unwrap();
-    
-    
     let _gl_context = window.gl_create_context().unwrap();
     let _gl = gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
@@ -59,7 +62,6 @@ fn main() {
     let mut last_x = 800.0 / 2.0;
     let mut last_y = 600.0 / 2.0;
 
-
     //Timing
     let mut delta_time = 0.0;
     let mut last_frame = 0.0;
@@ -75,83 +77,6 @@ fn main() {
 
     let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
 
-    let vertices: Vec<f32> = vec![
-    // Back face
-   -0.15, -0.15, -0.15,  1.0, 1.0, // Bottom-left
-    0.15,  0.15, -0.15,  0.0, 0.0, // top-right
-    0.15, -0.15, -0.15,  0.0, 1.0, // bottom-right         
-    0.15,  0.15, -0.15,  0.0, 0.0, // top-right
-   -0.15, -0.15, -0.15,  1.0, 1.0, // bottom-left
-   -0.15,  0.15, -0.15,  1.0, 0.0, // top-left
-   // Front face
-   -0.15, -0.15,  0.15,  1.0, 1.0, // bottom-left
-    0.15, -0.15,  0.15,  0.0, 1.0, // bottom-right
-    0.15,  0.15,  0.15,  0.0, 0.0, // top-right
-    0.15,  0.15,  0.15,  0.0, 0.0, // top-right
-   -0.15,  0.15,  0.15,  1.0, 0.0, // top-left
-   -0.15, -0.15,  0.15,  1.0, 1.0, // bottom-left
-   // Left face
-   -0.15,  0.15,  0.15,  1.0, 0.0, // top-right
-   -0.15,  0.15, -0.15,  0.0, 0.0, // top-left
-   -0.15, -0.15, -0.15,  0.0, 1.0, // bottom-left
-   -0.15, -0.15, -0.15,  0.0, 1.0, // bottom-left
-   -0.15, -0.15,  0.15,  1.0, 1.0, // bottom-right
-   -0.15,  0.15,  0.15,  1.0, 0.0, // top-right
-   // Right face
-    0.15,  0.15,  0.15,  0.0, 0.0, // top-left
-    0.15, -0.15, -0.15,  1.0, 1.0, // bottom-right
-    0.15,  0.15, -0.15,  1.0, 0.0, // top-right         
-    0.15, -0.15, -0.15,  1.0, 1.0, // bottom-right
-    0.15,  0.15,  0.15,  0.0, 0.0, // top-left
-    0.15, -0.15,  0.15,  0.0, 1.0, // bottom-left     
-   // Bottom face
-   -0.15, -0.15, -0.15,  1.0, 0.0, // top-right
-    0.15, -0.15, -0.15,  0.0, 0.0, // top-left
-    0.15, -0.15,  0.15,  0.0, 1.0, // bottom-left
-    0.15, -0.15,  0.15,  1.0, 0.0, // bottom-left
-   -0.15, -0.15,  0.15,  0.0, 0.0, // bottom-right
-   -0.15, -0.15, -0.15,  0.0, 1.0, // top-right
-   // Top face
-   -0.15,  0.15, -0.15,  0.0, 1.0, // top-left
-    0.15,  0.15,  0.15,  1.0, 0.0, // bottom-right
-    0.15,  0.15, -0.15,  1.0, 1.0, // top-right     
-    0.15,  0.15,  0.15,  1.0, 0.0, // bottom-right
-   -0.15,  0.15, -0.15,  0.0, 1.0, // top-left
-   -0.15,  0.15,  0.15,  0.0, 0.0  // bottom-left 
-
-    ];
-
-    //Y is height
-    //X is sideways in the x axis
-    //Z is sideways in the what would normaly be y axis
-    
-    // set up vertex array object
-    let mut vao: gl::types::GLuint = 0;
-    let mut vbo: gl::types::GLuint = 0;
-    let mut ebo: gl::types::GLuint = 0;
-    unsafe {
-
-        gl::GenBuffers(1, &mut vbo);
-        
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData( gl::ARRAY_BUFFER, (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, vertices.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut ebo);
-        gl::BindVertexArray(vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer( 0,3, gl::FLOAT, gl::FALSE, (5 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null(),);
-
-        gl::EnableVertexAttribArray(2);
-        gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, (5 * std::mem::size_of::<f32>()) as gl::types::GLint, (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid,);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
-    }
-
     unsafe {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
         gl::ClearColor(0.49, 0.87, 0.96, 1.0); // Divide smth like 120 by 255 and you get the color you want. Replace 120 with what you have in rgb
@@ -161,33 +86,23 @@ fn main() {
 
     
     let mut time_increment: f32 = 0.0;
-    let mut stopwatch = stopwatch::Stopwatch::new();
-    stopwatch::Stopwatch::start(&mut stopwatch);
+
     let mut world: world::World = world::World::new(
-        &AMOUNT_TEXTURES, 
-        &(camera_pos / BLOCK_RADIUS), 
+        &camera_pos, 
         &SQUARE_CHUNK_WIDTH, 
-        &BLOCK_RADIUS, 
         &shader_program, 
         &CHUNKS_LAYERS_FROM_PLAYER, 
         &VIEW_DISTANCE, 
-        &noise,
+        &WORLD_GEN_SEED,
         &MAX_HEIGHT
     );
-    print!("   TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
-    stopwatch::Stopwatch::stop(&mut stopwatch);
-
 
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
         for event in event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'main, 
-                
                 sdl2::event::Event::KeyDown { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    let camera_speed = 2.5 * delta_time;
-                    
-
                     //Change to polygon mesh mode
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Q {
                         unsafe {
@@ -204,26 +119,50 @@ fn main() {
                         break 'main;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        camera_pos = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                        keyboard_space = true;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                        camera_pos = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+                        keyboard_ctrl = true;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
-                        camera_pos = camera_pos + glm::vec3(camera_speed * camera_front.x, camera_speed * camera_front.y, camera_speed * camera_front.z);
+                        keyboard_w = true;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::S {
-                        camera_pos = camera_pos - glm::vec3(camera_speed * camera_front.x, camera_speed * camera_front.y, camera_speed * camera_front.z);
+                        keyboard_s = true;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::A {
-                        camera_pos = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                        keyboard_a = true;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::D {
-                        camera_pos = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                        keyboard_d = true;
+                    }
+
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::F {
+                        world::World::destroy_block(&mut world, &camera_front, &camera_pos);
                     }
                     
                     
                 },
+                sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
+                        keyboard_space = false;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
+                        keyboard_ctrl = false;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::W {
+                        keyboard_w = false;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::S {
+                        keyboard_s = false;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::A {
+                        keyboard_a = false;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::D {
+                        keyboard_d = false;
+                    }
+                }
                 
                 sdl2::event::Event::MouseMotion { timestamp: _, window_id: _, which: _, mousestate: _, x, y, xrel: _, yrel: _ } => {
                     if first_mouse
@@ -245,7 +184,7 @@ fn main() {
                     yaw += xoffset;
                     pitch += yoffset;
 
-                    // make sure that when pitch is out of bounds, screen doesn't get flipped
+                    //make sure that when pitch is out of bounds, screen doesn't get flipped
                     if pitch > 89.0 {
                         pitch = 89.0;
                     }
@@ -270,15 +209,59 @@ fn main() {
                         fov = 90.0;
                     }
                 },
+                sdl2::event::Event::MouseButtonDown { timestamp: _, window_id: _, which: _, mouse_btn, clicks: _, x: _, y: _ } =>{
+                    if !mouse_button_clicked {
+                        if mouse_btn.eq(&sdl2::mouse::MouseButton::Left){
+                            world::World::destroy_block(&mut world, &camera_front, &camera_pos);
+                            println!("Clicked left button ")
+                        } else {
+                            world::World::place_block(&mut world, &camera_front, &camera_pos);
+                            println!("Clicked right button ")
+                        }
+                        mouse_button_clicked = true;
+                    }
+                },
+                sdl2::event::Event::MouseButtonUp { timestamp: _, window_id: _, which: _, mouse_btn: _, clicks: _, x: _, y: _ } =>{
+                    mouse_button_clicked = false;
+                },
                 _ => {}
             }
         }     
+        //Key control
+        {
+            if keyboard_w {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos + glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+            }
+
+            if keyboard_a {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+            }
+
+            if keyboard_s {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos - glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+            }
+
+            if keyboard_d {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+            }
+
+            if keyboard_space {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+            }
+
+            if keyboard_ctrl {
+                let camera_speed = 7.0 * delta_time;
+                camera_pos = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+            }
+        }
         
-
-
-
+        //Rendering
         unsafe {
-
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); 
 
             let current_frame = time_increment as f32;
@@ -293,31 +276,42 @@ fn main() {
             let view_loc = gl::GetUniformLocation(shader_program.id(), "view".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
-            world::World::render(&mut world, &(camera_pos / BLOCK_RADIUS), &vao);
-
+            world::World::draw(&mut world,&camera_pos);
             gl::BindVertexArray(0);
 
         }
-        time_increment += 0.02;
+        time_increment += 0.04;
         window.gl_swap_window();
-        // let mut x_axis = f32::abs(camera_front.x);
-        // let mut y_axis = f32::abs(camera_front.y);
-        // let mut z_axis = f32::abs(camera_front.z);
-        // let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
-        // let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
-        // let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
+        {
+            // let x_axis = f32::abs(camera_front.x);
+            // let y_axis = f32::abs(camera_front.y);
+            // let z_axis = f32::abs(camera_front.z);
+            // let x_sign = if camera_front.x > 0.0 {"+"} else {"-"};
+            // let y_sign = if camera_front.y > 0.0 {"+"} else {"-"};
+            // let z_sign = if camera_front.z > 0.0 {"+"} else {"-"};
 
-        // if(x_axis > y_axis && x_axis > z_axis){
-        //     println!("Axis: {}X",x_sign);
-        // }else if(y_axis > x_axis && y_axis > z_axis){
-        //     println!("Axis: {}Y",y_sign);
-        // }else if(z_axis > y_axis && z_axis > x_axis){
-        //     println!("Axis: {}Z",z_sign);
-        // }
-        // stopwatch::Stopwatch::stop(&mut stopwatch);
-        // print!(" TimeElapsed: {}",stopwatch::Stopwatch::elapsed_ms(&stopwatch));
-        // stopwatch::Stopwatch::reset(&mut stopwatch);
+            // if x_axis > y_axis && x_axis > z_axis {
+            //     println!("Axis: {}X",x_sign);
+            // }else if y_axis > x_axis && y_axis > z_axis {
+            //     println!("Axis: {}Y",y_sign);
+            // }else if z_axis > y_axis && z_axis > x_axis {
+            //     println!("Axis: {}Z",z_sign);
+            // }
+        }
         
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
+
+/*
+TODO:
+Make efficient block rendering without lag.
+Make terrain look good
+Make block desturction and placement possible.
+Make water
+Make lighting
+
+
+
+
+*/
