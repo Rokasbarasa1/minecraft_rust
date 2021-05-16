@@ -95,8 +95,28 @@ impl World{
         }
     }
 
-    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>){
-
+    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: usize){
+        let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
+        let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
+        while glm::distance(position.clone(), end.clone()) < 6.0 {
+            let block_index = get_block_or_air(self, &end);
+            
+            if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
+                let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
+                
+                if Block::is_air(& block){
+                    last_air_block_index = block_index.clone();
+                }else{
+                    
+                    let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[last_air_block_index.0][last_air_block_index.1])[last_air_block_index.2][last_air_block_index.3][last_air_block_index.4];
+                    Block::set_visible(&mut block);
+                    block::Block::set_block_id(&mut block, selected_block);
+                    check_blocks_around_block(self, last_air_block_index.0, last_air_block_index.1, last_air_block_index.2, last_air_block_index.3, last_air_block_index.4);
+                    break;
+                }
+            }
+            ray_step(&mut end, &direction, 0.1)
+        }
     }
 }
 
@@ -131,6 +151,45 @@ fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usiz
                             index_m = m; 
                             min = distance;
                         }
+                    }
+                }
+            }
+        }
+        return (index_i,index_k,index_j,index_l,index_m);
+    }else{
+        return (index_i,index_k,index_j,index_l,index_m);
+    }
+}
+
+fn get_block_or_air(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+    let mut index_i: usize = 9999;
+    let mut index_k: usize = 9999;
+    let mut index_j: usize = 9999; 
+    let mut index_l: usize = 9999; 
+    let mut index_m: usize = 9999;
+    let mut min:f32 = 9999.0;
+    for i in 0..world.chunk_grid.len(){
+        for k in 0..world.chunk_grid[i].len(){
+            let position = Chunk::get_position(&world.chunk_grid[i][k]).clone();
+            let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
+            if distance < min && distance < world.chunk_width as f32 / 2.0  {
+                min = distance;
+                index_i = i;
+                index_k = k;
+            }
+        }
+    }
+    if min < world.chunk_width as f32 / 2.0{
+        min = 9999.0;
+        for j in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k]).len() {
+            for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
+                for m in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l].len() {
+                    let distance = glm::distance(block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone(), end.clone());
+                    if distance < (f32::powf(0.5, 2.0) + f32::powf(0.5, 2.0)).sqrt()  && min > distance{
+                        index_j = j; 
+                        index_l = l; 
+                        index_m = m; 
+                        min = distance;
                     }
                 }
             }
@@ -374,7 +433,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
 }
 
 fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l: usize, m: usize){
-    
+    check_block_sides(&mut world.chunk_grid, i, k, j, l, m, world.chunk_width as usize);
     //Check up 
     if Chunk::get_blocks_vector_mutable(&mut world.chunk_grid[i][k])[j][l].len() != 1 && m != Chunk::get_blocks_vector_mutable(&mut world.chunk_grid[i][k])[j][l].len() -1  && m < Chunk::get_blocks_vector_mutable(&mut world.chunk_grid[i][k])[j][l].len() + 1 {
         check_block_sides(&mut world.chunk_grid, i, k, j, l, m+1, world.chunk_width as usize);

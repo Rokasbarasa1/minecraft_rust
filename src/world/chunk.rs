@@ -57,6 +57,7 @@ impl Chunk{
                 for j in 0..*max_height{//{
                     //Maybe later do air rendering
                     let number: usize;
+                    let water_level: usize = 11;
                     //CHUNK TESTING BLOCK BREAKING
                     // if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
                     //     number = 0;
@@ -68,7 +69,7 @@ impl Chunk{
 
                     //ACTUAL TERRAIn
                     if j > max {
-                        if j < 11{
+                        if j < water_level{
                             number = 3;
                         }else{
                             number = 240;
@@ -79,7 +80,11 @@ impl Chunk{
                         if j <= 7 {
                             number = 1;
                         }else if j == max {
-                            number = 0;
+                            if j > water_level + 2{
+                                number = 0;
+                            }else{
+                                number = 6;
+                            }
                         }else if j >= 8  {
                             number = 2;
                         }  else {

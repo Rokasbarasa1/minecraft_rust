@@ -155,5 +155,9 @@ impl Block {
     pub fn set_block_id(&mut self, new_id: usize){
         self.id = new_id;
     }
+
+    pub fn set_visible(&mut self){
+        self.visible = true;
+    }
 }
 

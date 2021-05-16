@@ -15,8 +15,8 @@ fn main() {
     //Current amount of textures
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
     const CHUNKS_LAYERS_FROM_PLAYER: u32 = 8; //Odd numbers
-    const WINDOW_WIDTH: u32 = 600;
-    const WINDOW_HEIGHT: u32 = 600;
+    const WINDOW_WIDTH: u32 = 1920;
+    const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
     const MAX_HEIGHT: usize = 40;
@@ -30,6 +30,7 @@ fn main() {
     let mut keyboard_d = false;
     let mut keyboard_space = false;
     let mut keyboard_ctrl = false;
+    let mut selected_block: usize = 4;
 
     // let noise = Perlin::new();
     // noise.set_seed(WORLD_GEN_SEED);
@@ -141,6 +142,37 @@ fn main() {
                         world::World::destroy_block(&mut world, &camera_front, &camera_pos);
                     }
                     
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num1 {
+                        selected_block = 0;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num2 {
+                        selected_block = 1;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num3 {
+                        selected_block = 2;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num4 {
+                        selected_block = 3;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num5 {
+                        selected_block = 4;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num6 {
+                        selected_block = 5;
+                    }
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num7 {
+                        selected_block = 6;
+                    }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num8 {
+                    //     selected_block = 7;
+                    // }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num9 {
+                    //     selected_block = 8;
+                    // }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num0 {
+                    //     selected_block = 9;
+                    // }
+
                     
                 },
                 sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
@@ -215,7 +247,7 @@ fn main() {
                             world::World::destroy_block(&mut world, &camera_front, &camera_pos);
                             println!("Clicked left button ")
                         } else {
-                            world::World::place_block(&mut world, &camera_front, &camera_pos);
+                            world::World::place_block(&mut world, &camera_front, &camera_pos, selected_block);
                             println!("Clicked right button ")
                         }
                         mouse_button_clicked = true;
