@@ -25,7 +25,7 @@ Due to the massive performance draw of rendering all of those blocks some cuttin
 Implemented some terrain generation. Found out that my ways of rendering the blocks are not very efficient... maybe a million calls to DrawArray. So will need to work on that a lot. Maybe move to glium instead of gl-rs aswell.
 ![image](https://user-images.githubusercontent.com/50622827/116905445-470ec700-ac3f-11eb-84d8-e8f7b3926ab7.png)
 
-#16-05-2021
+# 15-05-2021
 
 After around 15 hours of refactoring I implemented a new way of rendering the terain in chunks instead of each block individualy. This is much much ... much efficient and makes the game playable. In addition to this is i finally got the hang of the noise functions so i made some terrain to go with these new features. It looks very nice now and was worth the effort.
 
@@ -36,4 +36,10 @@ I also added smooth motion of the player camera.
 Here you can see some edited terrain.
 
 ![image](https://user-images.githubusercontent.com/50622827/118380156-fb193600-b5df-11eb-820a-74803f4d9f47.png)
+
+# 16-05-2021
+
+Added placing blocks and multiple block types.
+
+![image](https://user-images.githubusercontent.com/50622827/118399033-766bfd80-b65b-11eb-827a-99c232723840.png)
 
