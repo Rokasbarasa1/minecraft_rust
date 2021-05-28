@@ -14,12 +14,12 @@ fn main() {
     //Settings
     //Current amount of textures
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
-    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 8; //Odd numbers
+    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 5; //Odd numbers
     const WINDOW_WIDTH: u32 = 1920;
     const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 40;
+    const MAX_HEIGHT: usize = 90;
 
     //Some booleans that in game keys control
     let mut mesh = false;

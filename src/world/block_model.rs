@@ -13,6 +13,7 @@ pub struct BlockModel{
     ny_uv: Vec<glm::Vec2>,
     pz_uv: Vec<glm::Vec2>,
     nz_uv: Vec<glm::Vec2>,
+    brightness: Vec<f32>,
     normals: Vec<glm::Vec3>,
 }
 
@@ -439,6 +440,21 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
             
         ];
 
+        let brightness: Vec<f32> = vec![
+            //Back
+            0.70,
+            //Front
+            0.86,
+            //Left
+            0.75,
+            //Right
+            0.80,
+            //Bottom
+            0.5,
+            //Top
+            1.0
+        ];
+
         return BlockModel{
             px_pos,
             nx_pos,
@@ -452,6 +468,7 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
             ny_uv,
             pz_uv,
             nz_uv,
+            brightness,
             normals,
         }
     }
@@ -510,6 +527,10 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
 
     pub fn get_normals(&self) -> &Vec<glm::Vec3>{
         &self.normals
+    }
+
+    pub fn get_brightness(&self) -> &Vec<f32>{
+        &self.brightness
     }
     
 }

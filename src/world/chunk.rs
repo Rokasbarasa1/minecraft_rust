@@ -9,12 +9,13 @@ use noise::{ Blend, Fbm, RidgedMulti};
 pub struct Chunk {
     position: glm::Vector3<f32>,
     blocks: Vec<Vec<Vec<block::Block>>>,
-    vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3)>,
+    vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32)>,
     positions: Vec<f32>,
     uvs: Vec<f32>,
     normals: Vec<f32>,
+    brightness: Vec<f32>,
     vao: gl::types::GLuint,
-    vbos: (gl::types::GLuint, gl::types::GLuint),
+    vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
     chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 }
 
@@ -115,8 +116,9 @@ impl Chunk{
             positions:  vec![],
             uvs:  vec![],
             normals:  vec![],
+            brightness: vec![],
             vao: 0,
-            vbos: (0,0),
+            vbos: (0,0,0),
             chunk_model: (0,0,0)
         };
     }
@@ -136,14 +138,16 @@ impl Chunk{
             unsafe {
                 gl::DeleteBuffers(1, &self.vbos.0);
                 gl::DeleteBuffers(1, &self.vbos.1);
+                gl::DeleteBuffers(1, &self.vbos.2);
             }
         }
         self.vertices.clear();
         self.normals.clear();
         self.positions.clear();
         self.uvs.clear();
+        self.brightness.clear();
         self.vao = 0;
-        self.vbos = (0,0);
+        self.vbos = (0,0,0);
         self.chunk_model = (0,0,0);
         for i in 0..self.blocks.len() {
             for k in 0..self.blocks[i].len() {
@@ -172,6 +176,11 @@ impl Chunk{
             self.normals.push(self.vertices[i].2.y);
             self.normals.push(self.vertices[i].2.z);
         }
+
+        for i in 0..self.vertices.len() {
+            self.brightness.push(self.vertices[i].3);
+        }
+
         self.vertices.clear();
     }
 
@@ -199,15 +208,19 @@ impl Chunk{
         &self.uvs
     }
 
+    pub fn get_brightnesses(&self) -> &Vec<f32>{
+        &self.brightness
+    }
+
     pub fn post_put_to_gpu(&mut self) {
         self.positions.clear();
         self.uvs.clear();
         self.normals.clear();
     }
 
-    pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint){
+    pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint){
         self.vao = vao;
-        self.vbos = (vbo_id_vert, vbo_id_tex);
+        self.vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright);
     }
 
     pub fn get_chunk_model(&self) -> &(gl::types::GLuint, usize, gl::types::GLuint){

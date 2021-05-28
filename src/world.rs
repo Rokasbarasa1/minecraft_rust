@@ -62,6 +62,7 @@ impl World{
                         unsafe{
                             gl::BindVertexArray(chunk_model.0);
                             gl::EnableVertexAttribArray(0);
+                            gl::EnableVertexAttribArray(1);
                             gl::EnableVertexAttribArray(2);
                             gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
                 
@@ -483,13 +484,17 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
 fn build_mesh(world: &mut World){
     for i in 0..world.chunk_grid.len() {
         for k in 0..world.chunk_grid[i].len() {
+            println!("Chunk i={} k={}", i, k);
             Chunk::build_mesh(&mut world.chunk_grid[i][k], &world.block_model);
+            println!("Built mesh");
             Chunk::populate_mesh(&mut world.chunk_grid[i][k]);
-
+            println!("Populated mesh");
             let raw_model: (gl::types::GLuint, usize) = get_raw_model(world, i.clone(), k.clone()); 
             let texture_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_model.0, raw_model.1, world.loaded_textures);
-
+            println!("made raw models");
             Chunk::set_chunk_model(&mut world.chunk_grid[i][k], texture_model);
+            println!("Set the chunk model");
+            
         }
     }
 }
@@ -519,6 +524,16 @@ fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, u
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     }
 
+    //Brightness
+    let mut vbo_id_bright: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_bright);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_bright);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_brightnesses(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_brightnesses(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 1, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
     //UV's
     let mut vbo_id_tex: gl::types::GLuint = 0;
     unsafe {
@@ -528,7 +543,7 @@ fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, u
         gl::VertexAttribPointer( 2, 2, gl::FLOAT, gl::FALSE, (2 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     }
-    Chunk::set_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex);
+    Chunk::set_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright);
     return (vao_id, Chunk::get_vertices(&world.chunk_grid[0][0]).len());
 }
 

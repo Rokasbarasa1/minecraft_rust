@@ -37,7 +37,7 @@ impl Block {
         self.visible = false;
     }
 
-    pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, glm::Vec3)>, block_model: &BlockModel){
+    pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32)>, block_model: &BlockModel){
         if self.id != 240 && self.visible {
             for i in 0..self.sides.len() {
                 if self.sides[i] == true{
@@ -51,7 +51,8 @@ impl Block {
                                             BlockModel::get_px(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_px_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
@@ -64,7 +65,8 @@ impl Block {
                                             BlockModel::get_nx(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_nx_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
@@ -77,7 +79,8 @@ impl Block {
                                             BlockModel::get_py(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_py_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
@@ -90,7 +93,8 @@ impl Block {
                                             BlockModel::get_ny(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_ny_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
@@ -103,7 +107,8 @@ impl Block {
                                             BlockModel::get_pz(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_pz_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
@@ -116,7 +121,8 @@ impl Block {
                                             BlockModel::get_nz(block_model)[n].z + self.position.z
                                         ),
                                         BlockModel::get_nz_uv(block_model)[(self.id * 6) + n],
-                                        BlockModel::get_normals(block_model)[n]
+                                        BlockModel::get_normals(block_model)[n],
+                                        BlockModel::get_brightness(block_model)[i]
                                     )
                                 )
                             },
