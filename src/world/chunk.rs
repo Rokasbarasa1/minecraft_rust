@@ -153,6 +153,7 @@ impl Chunk{
         if self.vao != 0{
             unsafe {
                 gl::DeleteVertexArrays(1, &self.vao);
+                gl::DeleteVertexArrays(1, &self.transparent_vao);
             }
         }
 
@@ -162,6 +163,11 @@ impl Chunk{
                 gl::DeleteBuffers(1, &self.vbos.1);
                 gl::DeleteBuffers(1, &self.vbos.2);
                 gl::DeleteBuffers(1, &self.vbos.3);
+
+                gl::DeleteBuffers(1, &self.transparent_vbos.0);
+                gl::DeleteBuffers(1, &self.transparent_vbos.1);
+                gl::DeleteBuffers(1, &self.transparent_vbos.2);
+                gl::DeleteBuffers(1, &self.transparent_vbos.3);
             }
         }
         self.vertices.clear();
@@ -173,6 +179,15 @@ impl Chunk{
         self.vao = 0;
         self.vbos = (0,0,0,0);
         self.chunk_model = (0,0,0);
+
+        self.transparent_normals.clear();
+        self.transparent_positions.clear();
+        self.transparent_uvs.clear();
+        self.transparent_brightness.clear();
+        self.transparent_opacity.clear();
+        self.transparent_vao = 0;
+        self.transparent_vbos = (0,0,0,0);
+        self.transparent_chunk_model = (0,0,0);
         for i in 0..self.blocks.len() {
             for k in 0..self.blocks[i].len() {
                 for j in 0..self.blocks[i][k].len() {

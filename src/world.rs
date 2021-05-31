@@ -535,6 +535,10 @@ fn build_mesh_single(world: &mut World, i: usize, k: usize){
     let texture_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_model.0, raw_model.1, world.loaded_textures);
 
     Chunk::set_chunk_model(&mut world.chunk_grid[i][k], texture_model);
+
+    let raw_transparent_model: (gl::types::GLuint, usize) = get_raw_model_transparent(world, i.clone(), k.clone()); 
+    let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
+    Chunk::set_transparent_chunk_model(&mut world.chunk_grid[i][k], texture_transparent_model);
 }
 
 fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){

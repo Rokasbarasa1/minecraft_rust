@@ -339,11 +339,6 @@ fn main() {
 
 /*
 TODO:
-Make efficient block rendering without lag.
-Make terrain look good
-Make block desturction and placement possible.
-Make water
-Make lighting
 
 
 
