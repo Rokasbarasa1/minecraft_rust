@@ -9,14 +9,26 @@ use noise::{ Blend, Fbm, RidgedMulti};
 pub struct Chunk {
     position: glm::Vector3<f32>,
     blocks: Vec<Vec<Vec<block::Block>>>,
-    vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32)>,
+    vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32, f32, bool)>,
+
     positions: Vec<f32>,
     uvs: Vec<f32>,
     normals: Vec<f32>,
     brightness: Vec<f32>,
+    opacity: Vec<f32>,
     vao: gl::types::GLuint,
-    vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
     chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+
+    transparent_positions: Vec<f32>,
+    transparent_uvs: Vec<f32>,
+    transparent_normals: Vec<f32>,
+    transparent_brightness: Vec<f32>,
+    transparent_opacity: Vec<f32>,
+    transparent_vao: gl::types::GLuint,
+    transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+
 }
 
 impl Chunk{
@@ -117,9 +129,19 @@ impl Chunk{
             uvs:  vec![],
             normals:  vec![],
             brightness: vec![],
+            opacity: vec![],
             vao: 0,
-            vbos: (0,0,0),
-            chunk_model: (0,0,0)
+            vbos: (0,0,0,0),
+            chunk_model: (0,0,0),
+
+            transparent_positions:  vec![],
+            transparent_uvs:  vec![],
+            transparent_normals:  vec![],
+            transparent_brightness: vec![],
+            transparent_opacity: vec![],
+            transparent_vao: 0,
+            transparent_vbos: (0,0,0,0),
+            transparent_chunk_model: (0,0,0)
         };
     }
 
@@ -139,6 +161,7 @@ impl Chunk{
                 gl::DeleteBuffers(1, &self.vbos.0);
                 gl::DeleteBuffers(1, &self.vbos.1);
                 gl::DeleteBuffers(1, &self.vbos.2);
+                gl::DeleteBuffers(1, &self.vbos.3);
             }
         }
         self.vertices.clear();
@@ -146,8 +169,9 @@ impl Chunk{
         self.positions.clear();
         self.uvs.clear();
         self.brightness.clear();
+        self.opacity.clear();
         self.vao = 0;
-        self.vbos = (0,0,0);
+        self.vbos = (0,0,0,0);
         self.chunk_model = (0,0,0);
         for i in 0..self.blocks.len() {
             for k in 0..self.blocks[i].len() {
@@ -161,26 +185,58 @@ impl Chunk{
     pub fn populate_mesh(&mut self){
         
         for i in 0..self.vertices.len() {
-            self.positions.push(self.vertices[i].0.x);
-            self.positions.push(self.vertices[i].0.y);
-            self.positions.push(self.vertices[i].0.z);
+            if self.vertices[i].5 != true{
+                self.positions.push(self.vertices[i].0.x);
+                self.positions.push(self.vertices[i].0.y);
+                self.positions.push(self.vertices[i].0.z);
+            }else{
+                self.transparent_positions.push(self.vertices[i].0.x);
+                self.transparent_positions.push(self.vertices[i].0.y);
+                self.transparent_positions.push(self.vertices[i].0.z);
+            }
+            
         }
 
         for i in 0..self.vertices.len() {
-            self.uvs.push(self.vertices[i].1.x);
-            self.uvs.push(self.vertices[i].1.y);
+            if self.vertices[i].5 != true{
+                self.uvs.push(self.vertices[i].1.x);
+                self.uvs.push(self.vertices[i].1.y);
+            }else{
+                self.transparent_uvs.push(self.vertices[i].1.x);
+                self.transparent_uvs.push(self.vertices[i].1.y);
+            } 
         }
 
         for i in 0..self.vertices.len() {
-            self.normals.push(self.vertices[i].2.x);
-            self.normals.push(self.vertices[i].2.y);
-            self.normals.push(self.vertices[i].2.z);
+            if self.vertices[i].5 != true{
+                self.normals.push(self.vertices[i].2.x);
+                self.normals.push(self.vertices[i].2.y);
+                self.normals.push(self.vertices[i].2.z);
+            }else{
+                self.transparent_normals.push(self.vertices[i].2.x);
+                self.transparent_normals.push(self.vertices[i].2.y);
+                self.transparent_normals.push(self.vertices[i].2.z);
+            }
         }
 
         for i in 0..self.vertices.len() {
-            self.brightness.push(self.vertices[i].3);
+            if self.vertices[i].5 != true{
+                self.brightness.push(self.vertices[i].3);
+            }else{
+                self.transparent_brightness.push(self.vertices[i].3);
+            }
         }
 
+        for i in 0..self.vertices.len() {
+            if self.vertices[i].5 != true{
+                self.opacity.push(self.vertices[i].4);
+            }else{
+                self.transparent_opacity.push(self.vertices[i].4);
+            }
+        }
+
+
+        //SORT ALL OF THE TRANSPARENT ARRAYS BASED ON DISTANCE FROM PLAYER
         self.vertices.clear();
     }
 
@@ -212,23 +268,58 @@ impl Chunk{
         &self.brightness
     }
 
+    pub fn get_opacity(&self) -> &Vec<f32>{
+        &self.opacity
+    }
+
+
+    pub fn get_transparent_vertices(&self) -> &Vec<f32> {
+        &self.transparent_positions
+    }
+
+    pub fn get_transparent_uv(&self) -> &Vec<f32> {
+        &self.transparent_uvs
+    }
+
+    pub fn get_transparent_brightnesses(&self) -> &Vec<f32>{
+        &self.transparent_brightness
+    }
+
+    pub fn get_transparent_opacity(&self) -> &Vec<f32>{
+        &self.transparent_opacity
+    }
+
+
     pub fn post_put_to_gpu(&mut self) {
         self.positions.clear();
         self.uvs.clear();
         self.normals.clear();
     }
 
-    pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint){
+    pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint, vbo_id_opacity: gl::types::GLuint){
         self.vao = vao;
-        self.vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright);
+        self.vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
+    }
+
+    pub fn set_transparent_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint, vbo_id_opacity: gl::types::GLuint){
+        self.transparent_vao = vao;
+        self.transparent_vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
     }
 
     pub fn get_chunk_model(&self) -> &(gl::types::GLuint, usize, gl::types::GLuint){
         return &self.chunk_model;
     }
 
+    pub fn get_transparent_chunk_model(&self) -> &(gl::types::GLuint, usize, gl::types::GLuint){
+        return &self.transparent_chunk_model;
+    }
+
     pub fn set_chunk_model(&mut self, chunk_model: (gl::types::GLuint, usize, gl::types::GLuint)){
         self.chunk_model = chunk_model;
+    }
+
+    pub fn set_transparent_chunk_model(&mut self, transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint)){
+        self.transparent_chunk_model = transparent_chunk_model;
     }
 }
 

@@ -7,6 +7,12 @@ pub struct BlockModel{
     ny_pos: Vec<glm::Vec3>,
     pz_pos: Vec<glm::Vec3>,
     nz_pos: Vec<glm::Vec3>,
+    px_pos_water: Vec<glm::Vec3>,
+    nx_pos_water: Vec<glm::Vec3>,
+    py_pos_water: Vec<glm::Vec3>,
+    ny_pos_water: Vec<glm::Vec3>,
+    pz_pos_water: Vec<glm::Vec3>,
+    nz_pos_water: Vec<glm::Vec3>,
     px_uv: Vec<glm::Vec2>,
     nx_uv: Vec<glm::Vec2>,
     py_uv: Vec<glm::Vec2>,
@@ -21,66 +27,134 @@ pub struct BlockModel{
 impl BlockModel {
 
     pub fn init() -> BlockModel{
-        let mut px_pos: Vec<glm::Vec3> = vec![];
-        let mut nx_pos: Vec<glm::Vec3> = vec![];
-        let mut py_pos: Vec<glm::Vec3> = vec![];
-        let mut ny_pos: Vec<glm::Vec3> = vec![];
-        let mut pz_pos: Vec<glm::Vec3> = vec![];
-        let mut nz_pos: Vec<glm::Vec3> = vec![];
-        let mut normals: Vec<glm::Vec3> = vec![];
-        
-        
-        px_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        px_pos.push(glm::vec3( 0.5,  0.5, -0.5));
-        px_pos.push(glm::vec3(0.5, -0.5, -0.5));
-        px_pos.push(glm::vec3(0.5,  0.5, -0.5));
-        px_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        px_pos.push(glm::vec3(-0.5,  0.5, -0.5));
+        let px_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3( 0.5,  0.5, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.5, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5,  0.5, -0.5)
+        ];
 
-        nx_pos.push(glm::vec3(-0.5, -0.5,  0.5));
-        nx_pos.push(glm::vec3(0.5, -0.5,  0.5));
-        nx_pos.push(glm::vec3(0.5,  0.5,  0.5));
-        nx_pos.push(glm::vec3(0.5,  0.5,  0.5));
-        nx_pos.push(glm::vec3(-0.5,  0.5,  0.5));
-        nx_pos.push(glm::vec3(-0.5, -0.5,  0.5));
-          
-        py_pos.push(glm::vec3(-0.5,  0.5,  0.5));
-        py_pos.push(glm::vec3(-0.5,  0.5, -0.5));
-        py_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        py_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        py_pos.push(glm::vec3(-0.5, -0.5,  0.5));
-        py_pos.push(glm::vec3(-0.5,  0.5,  0.5));
-          
-        ny_pos.push(glm::vec3(0.5,  0.5,  0.5));
-        ny_pos.push(glm::vec3(0.5, -0.5, -0.5));
-        ny_pos.push(glm::vec3(0.5,  0.5, -0.5));
-        ny_pos.push(glm::vec3(0.5, -0.5, -0.5));
-        ny_pos.push(glm::vec3(0.5,  0.5,  0.5));
-        ny_pos.push(glm::vec3(0.5, -0.5,  0.5));
-            
-        pz_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        pz_pos.push(glm::vec3(0.5, -0.5, -0.5));
-        pz_pos.push(glm::vec3(0.5, -0.5,  0.5));
-        pz_pos.push(glm::vec3(0.5, -0.5,  0.5));
-        pz_pos.push(glm::vec3(-0.5, -0.5,  0.5));
-        pz_pos.push(glm::vec3(-0.5, -0.5, -0.5));
-        
-        nz_pos.push(glm::vec3(-0.5,  0.5, -0.5));
-        nz_pos.push(glm::vec3(0.5,  0.5,  0.5));
-        nz_pos.push(glm::vec3(0.5,  0.5, -0.5));
-        nz_pos.push(glm::vec3( 0.5,  0.5,  0.5));
-        nz_pos.push(glm::vec3(-0.5,  0.5, -0.5));
-        nz_pos.push(glm::vec3(-0.5,  0.5,  0.5));
-    
-    
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
-        normals.push(glm::vec3(0.0, 0.0, 0.0));
+        let nx_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(-0.5,  0.5,  0.5),
+            glm::vec3(-0.5, -0.5,  0.5)
+        ];
 
-        
+        let py_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5,  0.5,  0.5),
+            glm::vec3(-0.5,  0.5, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(-0.5,  0.5,  0.5)
+        ];
+
+        let ny_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.5, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(0.5, -0.5,  0.5)
+        ];
+
+        let pz_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(-0.5, -0.5, -0.5)
+        ];
+
+        let nz_pos: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5,  0.5, -0.5),
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(0.5,  0.5, -0.5),
+            glm::vec3( 0.5,  0.5,  0.5),
+            glm::vec3(-0.5,  0.5, -0.5),
+            glm::vec3(-0.5,  0.5,  0.5)
+        ];
+
+
+
+
+        let px_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3( 0.5,  0.40, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.40, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5,  0.40, -0.5)
+        ];
+
+        let nx_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(0.5,  0.40,  0.5),
+            glm::vec3(0.5,  0.40,  0.5),
+            glm::vec3(-0.5,  0.40,  0.5),
+            glm::vec3(-0.5, -0.5,  0.5)
+        ];
+
+        let py_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5,  0.40,  0.5),
+            glm::vec3(-0.5,  0.40, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(-0.5,  0.40,  0.5)
+        ];
+
+        let ny_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(0.5,  0.40,  0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.40, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5,  0.40,  0.5),
+            glm::vec3(0.5, -0.5,  0.5)
+        ];
+
+        let pz_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(0.5, -0.5,  0.5),
+            glm::vec3(-0.5, -0.5,  0.5),
+            glm::vec3(-0.5, -0.5, -0.5)
+        ];
+
+        let nz_pos_water: Vec<glm::Vec3> = vec![
+            glm::vec3(-0.5,  0.5, -0.5),
+            glm::vec3(0.5,  0.5,  0.5),
+            glm::vec3(0.5,  0.5, -0.5),
+            glm::vec3( 0.5,  0.5,  0.5),
+            glm::vec3(-0.5,  0.5, -0.5),
+            glm::vec3(-0.5,  0.5,  0.5)
+        ];
+
+
+
+
+
+        let normals: Vec<glm::Vec3> = vec![
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.0, 0.0, 0.0)
+        ];
+
+
+
+
+
         let px_uv: Vec<glm::Vec2> = vec![
             //GRASS
             glm::vec2(4.0 / 16.0, 1.0 / 16.0),
@@ -440,6 +514,9 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
             
         ];
 
+
+
+
         let brightness: Vec<f32> = vec![
             //Back
             0.70,
@@ -462,6 +539,14 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
             ny_pos,
             pz_pos,
             nz_pos,
+
+            px_pos_water,
+            nx_pos_water,
+            py_pos_water,
+            ny_pos_water,
+            pz_pos_water,
+            nz_pos_water,
+
             px_uv,
             nx_uv,
             py_uv,
@@ -473,28 +558,52 @@ glm::vec2(9.0 / 16.0, 0.0 / 16.0),
         }
     }
     
-    pub fn get_px(&self) -> &Vec<glm::Vec3>{
-        &self.px_pos
+    pub fn get_px(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.px_pos_water
+        }else{
+            &self.px_pos
+        }
     }
 
-    pub fn get_nx(&self) -> &Vec<glm::Vec3>{
-        &self.nx_pos
+    pub fn get_nx(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.nx_pos_water
+        }else{
+            &self.nx_pos
+        }
     }
 
-    pub fn get_py(&self) -> &Vec<glm::Vec3>{
-        &self.py_pos
+    pub fn get_py(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.py_pos_water
+        }else{
+            &self.py_pos
+        }
     }
 
-    pub fn get_ny(&self) -> &Vec<glm::Vec3>{
-        &self.ny_pos
+    pub fn get_ny(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.ny_pos_water
+        }else{
+            &self.ny_pos
+        }
     }
 
-    pub fn get_pz(&self) -> &Vec<glm::Vec3>{
-        &self.pz_pos
+    pub fn get_pz(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.pz_pos_water
+        }else{
+            &self.pz_pos
+        }
     }
 
-    pub fn get_nz(&self) -> &Vec<glm::Vec3>{
-        &self.nz_pos
+    pub fn get_nz(&self, id: usize) -> &Vec<glm::Vec3>{
+        if id == 3{
+            &self.nz_pos_water
+        }else{
+            &self.nz_pos
+        }
     }
 
 

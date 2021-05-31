@@ -14,12 +14,12 @@ fn main() {
     //Settings
     //Current amount of textures
     const SQUARE_CHUNK_WIDTH: u32 = 16;//16;
-    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 5; //Odd numbers
+    const CHUNKS_LAYERS_FROM_PLAYER: u32 = 7; //Odd numbers
     const WINDOW_WIDTH: u32 = 1920;
     const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 90;
+    const MAX_HEIGHT: usize = 20;
 
     //Some booleans that in game keys control
     let mut mesh = false;
@@ -83,6 +83,8 @@ fn main() {
         gl::ClearColor(0.49, 0.87, 0.96, 1.0); // Divide smth like 120 by 255 and you get the color you want. Replace 120 with what you have in rgb
         gl::Enable(gl::DEPTH_TEST);
         gl::Enable(gl::CULL_FACE);
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
 
     

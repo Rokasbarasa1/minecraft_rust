@@ -3,6 +3,7 @@ extern crate noise;
 use crate::render_gl;
 pub mod chunk;
 pub mod block_model;
+mod Block_model;
 use self::{block_model::BlockModel, chunk::block};
 use std::{ffi::c_void};
 use block::Block;
@@ -53,6 +54,9 @@ impl World{
             self.unbuilt_models.clear();
         }
 
+        unsafe {
+            gl::Enable(gl::CULL_FACE);
+        }
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
                 if self.view_distance > glm::distance(camera_pos.clone(), *Chunk::get_position(&self.chunk_grid[i][k])) {
@@ -64,6 +68,7 @@ impl World{
                             gl::EnableVertexAttribArray(0);
                             gl::EnableVertexAttribArray(1);
                             gl::EnableVertexAttribArray(2);
+                            gl::EnableVertexAttribArray(3);
                             gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
                 
                             let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
@@ -71,6 +76,34 @@ impl World{
                             let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
                             gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
                             gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
+                        }
+                    //}
+                }
+            }
+        }
+        unsafe {
+            gl::Disable(gl::CULL_FACE);
+        }
+
+        for i in 0..self.chunk_grid.len(){
+            for k in 0..self.chunk_grid[i].len(){
+                if self.view_distance > glm::distance(camera_pos.clone(), *Chunk::get_position(&self.chunk_grid[i][k])) {
+                    self.program.set_used();
+                    let transparent_chunk_model = Chunk::get_transparent_chunk_model(&self.chunk_grid[i][k]);
+                    //if chunk_model.0 != 0 && chunk_model.1 != 0 && chunk_model.2 != 0 {
+                        unsafe{
+                            gl::BindVertexArray(transparent_chunk_model.0);
+                            gl::EnableVertexAttribArray(0);
+                            gl::EnableVertexAttribArray(1);
+                            gl::EnableVertexAttribArray(2);
+                            gl::EnableVertexAttribArray(3);
+                            gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
+                
+                            let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
+                            model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
+                            let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
+                            gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
+                            gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
                         }
                     //}
                 }
@@ -206,12 +239,6 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
     end.x = new_end.x;
     end.y = new_end.y;
     end.z = new_end.z;
-    // let yaw = glm::radians(direction.y + 90.0);
-    // let pitch = glm::radians(direction.x);
-
-    // end.x -= glm::cos(yaw) * scale;
-    // end.y -= glm::sin(yaw) * scale;
-    // end.z -= glm::tan(pitch) * scale;
 
 }
 
@@ -242,7 +269,6 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vect
         x_pos = x_pos_temp;
         z_pos -= *square_chunk_width as f32 ;
     }
-    println!(" ")
 }
 
 fn setup_texture(world: &mut World) {
@@ -259,7 +285,7 @@ fn setup_texture(world: &mut World) {
 
         gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MIN_FILTER, gl::NEAREST  as i32);
         gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MAG_FILTER, gl::NEAREST  as i32);
-
+        //gl::TexEnvf(gl::TEXTURE, gl::TEXTURE_ENV_MODE, gl::MODULATE);
         let (width ,height) = data.dimensions();
         
         let img_ptr: *const c_void = data.as_ptr() as *const c_void;
@@ -295,6 +321,8 @@ fn check_visibility(world: &mut World){
 }
 
 fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: usize, l: usize, m: usize, chunk_width: usize){
+    let block_id = Block::get_id(&Chunk::get_blocks_vector(&mut chunk_grid[i][k])[j][l][m]);
+    
     if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m]) {
         Block::set_invisiblie(&mut Chunk::get_blocks_vector_mutable(&mut chunk_grid[i][k])[j][l][m])
     }else {
@@ -318,14 +346,14 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
             if z_chunk_flag == 2 || chunk_grid.len()-1 == 0 && z_chunk_flag == 0{
                 sides.push(true);
             }else{
-                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i+1][k])[0][l][m]) { 
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i+1][k])[0][l][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i+1][k])[0][l][m]){ 
                     sides.push(true); 
                 }else {
                     sides.push(false); 
                 }
             }
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j+1][l][m]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j+1][l][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j+1][l][m])  { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -337,14 +365,14 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
             if z_chunk_flag == 0{
                 sides.push(true);
             }else{
-                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i-1][k])[chunk_width-1][l][m]) { 
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i-1][k])[chunk_width-1][l][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i-1][k])[chunk_width-1][l][m]) { 
                     sides.push(true); 
                 }else {
                     sides.push(false); 
                 }
             }
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j-1][l][m]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j-1][l][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j-1][l][m]) { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -357,14 +385,14 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
             if x_chunk_flag == 2 || chunk_grid.len()-1 == 0 && x_chunk_flag == 0{
                 sides.push(true);
             }else{
-                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k+1])[j][0][m]) { 
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k+1])[j][0][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k+1])[j][0][m])  { 
                     sides.push(true); 
                 }else {
                     sides.push(false); 
                 }
             }
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l+1][m]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l+1][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l+1][m])  { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -376,14 +404,14 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
             if x_chunk_flag == 0{
                 sides.push(true);
             }else{
-                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k-1])[j][chunk_width-1][m]) { 
+                if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k-1])[j][chunk_width-1][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k-1])[j][chunk_width-1][m])  { 
                     sides.push(true); 
                 }else {
                     sides.push(false); 
                 }
             }
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l-1][m]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l-1][m]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l-1][m])  { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -396,7 +424,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         if y_block_flag == 0{
             sides.push(true);
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&mut chunk_grid[i][k])[j][l][m-1]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m-1]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m-1])  { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -407,7 +435,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         if y_block_flag == 2 || 0 == Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l].len()-1{
             sides.push(true);
         }else{
-            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m+1]) { 
+            if Block::is_air(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m+1]) || block_id != 3 && Block::is_water(&Chunk::get_blocks_vector(&chunk_grid[i][k])[j][l][m+1])  { 
                 sides.push(true); 
             }else {
                 sides.push(false); 
@@ -484,17 +512,15 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
 fn build_mesh(world: &mut World){
     for i in 0..world.chunk_grid.len() {
         for k in 0..world.chunk_grid[i].len() {
-            println!("Chunk i={} k={}", i, k);
             Chunk::build_mesh(&mut world.chunk_grid[i][k], &world.block_model);
-            println!("Built mesh");
             Chunk::populate_mesh(&mut world.chunk_grid[i][k]);
-            println!("Populated mesh");
             let raw_model: (gl::types::GLuint, usize) = get_raw_model(world, i.clone(), k.clone()); 
             let texture_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_model.0, raw_model.1, world.loaded_textures);
-            println!("made raw models");
             Chunk::set_chunk_model(&mut world.chunk_grid[i][k], texture_model);
-            println!("Set the chunk model");
-            
+
+            let raw_transparent_model: (gl::types::GLuint, usize) = get_raw_model_transparent(world, i.clone(), k.clone()); 
+            let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
+            Chunk::set_transparent_chunk_model(&mut world.chunk_grid[i][k], texture_transparent_model);
         }
     }
 }
@@ -543,8 +569,66 @@ fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, u
         gl::VertexAttribPointer( 2, 2, gl::FLOAT, gl::FALSE, (2 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     }
-    Chunk::set_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright);
+
+    //Opacity
+    let mut vbo_id_opacity: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_opacity);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_opacity);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_opacity(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_opacity(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 3, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    Chunk::set_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
     return (vao_id, Chunk::get_vertices(&world.chunk_grid[0][0]).len());
+}
+
+fn get_raw_model_transparent(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){
+    let vao_id = create_vao();
+    
+    //Vertices
+    let mut vbo_id_vert: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_vert);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_vert);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_transparent_vertices(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_transparent_vertices(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 0, 3, gl::FLOAT, gl::FALSE, (3 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    //Brightness
+    let mut vbo_id_bright: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_bright);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_bright);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_transparent_brightnesses(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_transparent_brightnesses(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 1, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    //UV's
+    let mut vbo_id_tex: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_tex);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_tex);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_transparent_uv(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_transparent_uv(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 2, 2, gl::FLOAT, gl::FALSE, (2 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    //Opacity
+    let mut vbo_id_opacity: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo_id_opacity);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_opacity);
+        gl::BufferData(gl::ARRAY_BUFFER, (Chunk::get_transparent_opacity(&world.chunk_grid[i][k]).len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, Chunk::get_transparent_opacity(&world.chunk_grid[i][k]).as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
+        gl::VertexAttribPointer( 3, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    Chunk::set_transparent_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
+    return (vao_id, Chunk::get_transparent_vertices(&world.chunk_grid[0][0]).len());
 }
 
 fn create_vao() -> gl::types::GLuint{
