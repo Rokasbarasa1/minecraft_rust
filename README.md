@@ -43,3 +43,11 @@ Added placing blocks and multiple block types.
 
 ![image](https://user-images.githubusercontent.com/50622827/118399033-766bfd80-b65b-11eb-827a-99c232723840.png)
 
+# 29-05-2021 to 31-06-2021
+
+Added some cheat lighting of objects that will be probably used later. Now eveything doesnt look like a smear of shit.
+Added water that is transparent. Made it be slightly lower than the normal blocks and it looks super nice.
+Added propper transparency by seperating rendering of the transparent blocks from the solid blocks. I Though this was going to be a hard task, since blending is supposed to be very hard to do propperly, but it was very nice getting it on the first try without sorting.
+
+![image](https://user-images.githubusercontent.com/50622827/120228267-14aab680-c24b-11eb-9e44-c6c9eafb85c1.png)
+
