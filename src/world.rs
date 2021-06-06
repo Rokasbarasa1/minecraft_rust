@@ -53,14 +53,13 @@ impl World{
             }
             self.unbuilt_models.clear();
         }
-
+        self.program.set_used();
         unsafe {
             gl::Enable(gl::CULL_FACE);
         }
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
                 if self.view_distance > glm::distance(camera_pos.clone(), *Chunk::get_position(&self.chunk_grid[i][k])) {
-                    self.program.set_used();
                     let chunk_model = Chunk::get_chunk_model(&self.chunk_grid[i][k]);
                     //if chunk_model.0 != 0 && chunk_model.1 != 0 && chunk_model.2 != 0 {
                         unsafe{
@@ -154,6 +153,7 @@ impl World{
     }
 }
 
+
 fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
@@ -242,6 +242,7 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
 
 }
 
+
 fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &u32, render_out_from_player: &u32, WORLD_GEN_SEED: &u32, max_height: &usize){
     let half_chunk_width = (*square_chunk_width as f32 / 2.0).floor();
     let mut x_pos = camera_position.x + (half_chunk_width + (*render_out_from_player as f32 * *square_chunk_width as f32));
@@ -270,6 +271,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vect
         z_pos -= *square_chunk_width as f32 ;
     }
 }
+
 
 fn setup_texture(world: &mut World) {
 
@@ -305,6 +307,7 @@ fn setup_texture(world: &mut World) {
     }   
     world.loaded_textures = texture;
 }
+
 
 fn check_visibility(world: &mut World){
     for i in 0..world.chunk_grid.len() {
@@ -509,6 +512,7 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
     
 }
 
+
 fn build_mesh(world: &mut World){
     for i in 0..world.chunk_grid.len() {
         for k in 0..world.chunk_grid[i].len() {
@@ -540,6 +544,7 @@ fn build_mesh_single(world: &mut World, i: usize, k: usize){
     let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
     Chunk::set_transparent_chunk_model(&mut world.chunk_grid[i][k], texture_transparent_model);
 }
+
 
 fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){
     let vao_id = create_vao();
