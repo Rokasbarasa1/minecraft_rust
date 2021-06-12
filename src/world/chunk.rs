@@ -9,6 +9,8 @@ use noise::{ Blend, Fbm, RidgedMulti};
 pub struct Chunk {
     position: glm::Vector3<f32>,
     blocks: Vec<Vec<Vec<block::Block>>>,
+    grid_x: i32,
+    grid_z: i32,
     vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32, f32, bool)>,
 
     positions: Vec<f32>,
@@ -32,7 +34,7 @@ pub struct Chunk {
 }
 
 impl Chunk{
-    pub fn init(grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &u32, world_gen_seed: &u32, max_height: &usize) -> Chunk{
+    pub fn init(grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, world_gen_seed: &u32, max_height: &usize) -> Chunk{
 
         let mut x_pos = position.x.clone();
         let mut z_pos = position.z.clone();
@@ -47,10 +49,10 @@ impl Chunk{
         let fbm = Fbm::new();
         let blend = Blend::new(&perlin, &ridged, &fbm);
 
-        for i in 0..*square_chunk_width as usize {  //Z line Go from positive to negative
+        for i in 0..*square_chunk_width{  //Z line Go from positive to negative
             let collumn: Vec<Vec<block::Block>> = vec![];
             blocks.push(collumn);
-            for k in 0..*square_chunk_width as usize { //X line go from positive to negative
+            for k in 0..*square_chunk_width { //X line go from positive to negative
                 let row: Vec<block::Block> = vec![];
                 blocks[i].push(row);
 
@@ -71,7 +73,7 @@ impl Chunk{
                     //Maybe later do air rendering
                     let number: usize;
                     let water_level: usize = 11;
-                    //CHUNK TESTING BLOCK BREAKING
+                    // CHUNK TESTING BLOCK BREAKING
                     // if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
                     //     number = 0;
                     // }else if k == *square_chunk_width as usize -1 || k == 0 || i == 0 || i == *square_chunk_width as usize -1 {
@@ -124,7 +126,10 @@ impl Chunk{
         return Chunk{
             position: position_of_chunk,
             blocks,
+            grid_x,
+            grid_z,
             vertices:  vec![],
+            
             positions:  vec![],
             uvs:  vec![],
             normals:  vec![],
@@ -145,8 +150,107 @@ impl Chunk{
         };
     }
 
+    pub fn regenerate(&mut self, grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize){
+        let half_chunk_width = *square_chunk_width as f32 / 2.0;
+        let center_position = position;
+
+        let position = glm::vec3(position.x + half_chunk_width - 0.5 , position.y, position.z + half_chunk_width - 0.5);
+        
+        let mut x_pos = position.x.clone();
+        let mut z_pos = position.z.clone();
+        let mut y_pos = position.y.clone();
+        let x_pos_temp = position.x.clone();
+        let y_pos_temp = position.y.clone();
+
+        let perlin = Perlin::default();
+        let ridged = RidgedMulti::new();
+        let fbm = Fbm::new();
+        let blend = Blend::new(&perlin, &ridged, &fbm);
+
+        let max_height = self.blocks[0][0].len();
+        let square_chunk_width = self.blocks.len();
+
+        for i in 0..self.blocks.len(){  //Z line Go from positive to negative
+            for k in 0..self.blocks[i].len() { //X line go from positive to negative
+
+                let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.0190) as f64;
+                let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* 0.0190) as f64;
+                let mut  value = blend.get([value1, value2]);
+                
+                value = (value + 1.0)/2.0;
+                let max_int = map_value(value, 0, max_height);
+                let max: usize;
+                if max_int < 0 {
+                    max = (max_int * -1) as usize;
+                }else{
+                    max = max_int as usize
+                }
+
+                for j in 0..max_height{//{
+                    //Maybe later do air rendering
+                    let number: usize;
+                    let water_level: usize = 11;
+                    // CHUNK TESTING BLOCK BREAKING
+                    // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
+                    //     number = 0;
+                    // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
+                    //     number = 1;
+                    // }else{
+                    //     number = 2;
+                    // }
+
+                    //ACTUAL TERRAIn
+                    if j > max {
+                        if j < water_level{
+                            number = 3;
+                        }else{
+                            number = 240;
+                        }
+                        
+                    }else{
+                        
+                        if j <= 7 {
+                            number = 1;
+                        }else if j == max {
+                            if j > water_level + 2{
+                                number = 0;
+                            }else{
+                                number = 6;
+                            }
+                        }else if j >= 8  {
+                            number = 2;
+                        }  else {
+                            number = 240;
+                        }
+                    }
+                    
+
+                    self.blocks[i][k][j].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
+                    y_pos += 1.0;
+                }
+                y_pos = y_pos_temp;
+                x_pos -= 1.0;
+                
+            }
+            x_pos = x_pos_temp;
+            z_pos -= 1.0;
+
+        }
+
+        
+        self.position = center_position;
+    }
+    
     pub fn get_position(&self) -> &glm::Vector3<f32>{
         return &self.position;
+    }
+
+    pub fn set_position(&mut self, position: glm::Vector3<f32>) {
+        self.position = position;
+    }
+
+    pub fn get_grid(&self) -> (i32, i32){
+        (self.grid_x, self.grid_z)
     }
 
     pub fn build_mesh(&mut self, block_model: &BlockModel) {
@@ -250,8 +354,6 @@ impl Chunk{
             }
         }
 
-
-        //SORT ALL OF THE TRANSPARENT ARRAYS BASED ON DISTANCE FROM PLAYER
         self.vertices.clear();
     }
 

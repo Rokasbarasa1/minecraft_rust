@@ -1,4 +1,4 @@
-use crate::{render_gl, world::block_model::BlockModel};
+use crate::{world::block_model::BlockModel};
 
 extern crate gl;
 pub enum BlockId{
@@ -26,6 +26,13 @@ impl Block {
             visible: true,
             sides: cube_sides
         };
+    }
+
+    pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: usize){
+        self.position = position;
+        self.id = id;
+        self.visible = true;
+        self.sides = vec![]
     }
 
     pub fn set_visibility_vector(&mut self, cube_sides: Vec<bool>){
