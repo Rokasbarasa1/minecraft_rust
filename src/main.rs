@@ -15,9 +15,9 @@ fn main() {
     //Settings
     //Current amount of textures
     const SQUARE_CHUNK_WIDTH: usize = 16;//16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 9; //Odd numbers
-    const WINDOW_WIDTH: u32 = 1920;
-    const WINDOW_HEIGHT: u32 = 1080;
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 13; //Odd numbers
+    const WINDOW_WIDTH: u32 = 960;
+    const WINDOW_HEIGHT: u32 = 540;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
     const MAX_HEIGHT: usize = 20;
@@ -252,10 +252,8 @@ fn main() {
                     if !mouse_button_clicked {
                         if mouse_btn.eq(&sdl2::mouse::MouseButton::Left){
                             world::World::destroy_block(&mut world, &camera_front, &camera_pos);
-                            println!("Clicked left button ")
                         } else {
                             world::World::place_block(&mut world, &camera_front, &camera_pos, selected_block);
-                            println!("Clicked right button ")
                         }
                         mouse_button_clicked = true;
                     }

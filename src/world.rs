@@ -64,12 +64,6 @@ impl World{
             gl::Enable(gl::CULL_FACE);
         }
 
-        // Type 0 Nothing
-        // Type 1 deletion on positive x 
-        // Type 2 deletion on positive z
-        // Type 3 deletion on negative x
-        // Type 4 deletion on negative z
-
         let mut change_direction: usize = 0;
 
         for i in 0..self.chunk_grid.len(){
@@ -243,7 +237,6 @@ impl World{
                 let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
                 block::Block::set_block_id(&mut block, 240); //240 is air
                 block::Block::set_invisiblie(&mut block);
-                println!("block removed");
                 check_blocks_around_block(self, block_index.0, block_index.1, block_index.2, block_index.3, block_index.4);
                 break;
 
@@ -289,14 +282,21 @@ fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usiz
         for k in 0..world.chunk_grid[i].len(){
             let position = Chunk::get_position(&world.chunk_grid[i][k]).clone();
             let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
-            if distance < min && distance < world.chunk_width as f32 / 2.0  {
+            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+
+            if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
                 min = distance;
                 index_i = i;
                 index_k = k;
+                break;
             }
         }
+        if index_i != 9999 {
+            break;
+        }
     }
-    if min < world.chunk_width as f32 / 2.0{
+    if min != 9999.0{
         min = 9999.0;
         for j in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k]).len() {
             for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
@@ -308,6 +308,7 @@ fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usiz
                             index_l = l; 
                             index_m = m; 
                             min = distance;
+                            return (index_i,index_k,index_j,index_l,index_m)
                         }
                     }
                 }
@@ -330,14 +331,20 @@ fn get_block_or_air(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usiz
         for k in 0..world.chunk_grid[i].len(){
             let position = Chunk::get_position(&world.chunk_grid[i][k]).clone();
             let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
-            if distance < min && distance < world.chunk_width as f32 / 2.0  {
+            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+
+            if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
                 min = distance;
                 index_i = i;
                 index_k = k;
             }
         }
+        if index_i != 9999 {
+            break;
+        }
     }
-    if min < world.chunk_width as f32 / 2.0{
+    if min != 9999.0{
         min = 9999.0;
         for j in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k]).len() {
             for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
@@ -348,6 +355,7 @@ fn get_block_or_air(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usiz
                         index_l = l; 
                         index_m = m; 
                         min = distance;
+                        return (index_i,index_k,index_j,index_l,index_m)
                     }
                 }
             }
@@ -655,14 +663,16 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
     }
     else if i != 0 {
         check_block_sides(&mut world.chunk_grid, i-1, k, world.chunk_width as usize-1, l, m, world.chunk_width as usize);
-        world.unbuilt_models.push((i-1,k,false));
+        push_unbuilt_to_start((i-1,k,false), &mut world.unbuilt_models);
+        // world.unbuilt_models.push((i-1,k,false));
     }
     //Check right
     if j != world.chunk_width as usize -1 {
         check_block_sides(&mut world.chunk_grid, i, k, j+1, l, m, world.chunk_width as usize);
     }else if i != world.chunk_grid.len()-1 {
-         check_block_sides(&mut world.chunk_grid, i+1, k, 0, l, m, world.chunk_width as usize);
-         world.unbuilt_models.push((i+1,k,false));
+        check_block_sides(&mut world.chunk_grid, i+1, k, 0, l, m, world.chunk_width as usize);
+        // world.unbuilt_models.push((i+1,k,false));
+        push_unbuilt_to_start((i+1,k,false), &mut world.unbuilt_models);
     } 
 
 
@@ -671,17 +681,22 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
         check_block_sides(&mut world.chunk_grid, i, k, j, l-1, m, world.chunk_width as usize);
     }else if k != 0{
         check_block_sides(&mut world.chunk_grid, i, k-1, j, world.chunk_width as usize-1, m, world.chunk_width as usize);
-        world.unbuilt_models.push((i,k-1,false));
+        // world.unbuilt_models.push((i,k-1,false));
+        push_unbuilt_to_start((i,k-1,false), &mut world.unbuilt_models);
+
     }
     //Check back
     if l != world.chunk_width as usize -1{
         check_block_sides(&mut world.chunk_grid, i, k, j, l+1, m, world.chunk_width as usize);
     }else if k != world.chunk_grid[i].len()-1 {
         check_block_sides(&mut world.chunk_grid, i, k+1, j, 0, m, world.chunk_width as usize);
-        world.unbuilt_models.push((i,k+1,false));
+        // world.unbuilt_models.push((i,k+1,false));
+        push_unbuilt_to_start((i,k+1,false), &mut world.unbuilt_models);
     }
 
-    world.unbuilt_models.push((i,k,false));
+    // world.unbuilt_models.push((i,k,false));
+    push_unbuilt_to_start((i,k,false), &mut world.unbuilt_models);
+
     
 }
 
@@ -819,4 +834,10 @@ fn create_vao() -> gl::types::GLuint{
         gl::BindVertexArray(vao_id);
     }
     return vao_id;
+}
+
+fn push_unbuilt_to_start(unbuilt: (usize, usize, bool), vector: &mut Vec<(usize, usize, bool)>){
+    let mut unbuilt_part: Vec<(usize, usize, bool)> = vec![unbuilt];
+    unbuilt_part.append(vector);
+    *vector = unbuilt_part
 }

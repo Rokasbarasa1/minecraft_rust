@@ -71,14 +71,12 @@ impl Chunk{
                     let number: usize;
                     const WATER_LEVEL: usize = 11;
                     // CHUNK TESTING BLOCK BREAKING
-                    // if j == 0{
+                    // if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
                     //     number = 0;
-                    // }else if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
-                    //     number = 3;//0
                     // }else if k == *square_chunk_width as usize -1 || k == 0 || i == 0 || i == *square_chunk_width as usize -1 {
-                    //     number = 3;//1
+                    //     number = 1;
                     // }else{
-                    //     number = 3;//2
+                    //     number = 2;
                     // }
 
                     //ACTUAL TERRAIn
@@ -187,14 +185,12 @@ impl Chunk{
                     let number: usize;
                     const WATER_LEVEL: usize = 11;
                     // CHUNK TESTING BLOCK BREAKING
-                    // if j == 0{
+                    // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
                     //     number = 0;
-                    // }else if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
-                    //     number = 3;//0
                     // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
-                    //     number = 3;//1
+                    //     number = 1;
                     // }else{
-                    //     number = 3;//2
+                    //     number = 2;
                     // }
 
                     //ACTUAL TERRAIn
@@ -221,6 +217,7 @@ impl Chunk{
                             number = 240;
                         }
                     }
+                    
                     self.blocks[i][k][j].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
                     
                     y_pos += 1.0;
