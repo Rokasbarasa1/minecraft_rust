@@ -15,7 +15,7 @@ fn main() {
     //Settings
     //Current amount of textures
     const SQUARE_CHUNK_WIDTH: usize = 16;//16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11; //Odd numbers
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 9; //Odd numbers
     const WINDOW_WIDTH: u32 = 1920;
     const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
@@ -83,12 +83,11 @@ fn main() {
     // let skybox_shader = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
     unsafe {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
-        gl::ClearColor(0.49, 0.87, 0.96, 1.0); // Divide smth like 120 by 255 and you get the color you want. Replace 120 with what you have in rgb
+        gl::ClearColor(0.67, 0.79, 1.0, 1.0); // Divide smth like 120 by 255 and you get the color you want. Replace 120 with what you have in rgb
+        //0.67, 0.79, 1.0, 1.0
         gl::Enable(gl::DEPTH_TEST);
         gl::Enable(gl::CULL_FACE);
         gl::Enable(gl::BLEND);
-        //gl::DepthMask(gl::FALSE);
-        //gl::DepthRange(1.0, 1.0);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
 
@@ -370,11 +369,3 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
 }
-
-/*
-TODO:
-
-
-
-
-*/

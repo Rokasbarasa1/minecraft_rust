@@ -11,11 +11,10 @@ pub struct Chunk {
     blocks: Vec<Vec<Vec<block::Block>>>,
     grid_x: i32,
     grid_z: i32,
-    vertices: Vec<(glm::Vec3, glm::Vec2, glm::Vec3, f32, f32, bool)>,
+    vertices: Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>,
 
     positions: Vec<f32>,
     uvs: Vec<f32>,
-    normals: Vec<f32>,
     brightness: Vec<f32>,
     opacity: Vec<f32>,
     vao: gl::types::GLuint,
@@ -24,7 +23,6 @@ pub struct Chunk {
 
     transparent_positions: Vec<f32>,
     transparent_uvs: Vec<f32>,
-    transparent_normals: Vec<f32>,
     transparent_brightness: Vec<f32>,
     transparent_opacity: Vec<f32>,
     transparent_vao: gl::types::GLuint,
@@ -70,21 +68,22 @@ impl Chunk{
                 }
 
                 for j in 0..*max_height{//{
-                    //Maybe later do air rendering
                     let number: usize;
-                    let water_level: usize = 11;
+                    const WATER_LEVEL: usize = 11;
                     // CHUNK TESTING BLOCK BREAKING
-                    // if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
+                    // if j == 0{
                     //     number = 0;
+                    // }else if k == *square_chunk_width as usize -1 && i == *square_chunk_width as usize -1 {
+                    //     number = 3;//0
                     // }else if k == *square_chunk_width as usize -1 || k == 0 || i == 0 || i == *square_chunk_width as usize -1 {
-                    //     number = 1;
+                    //     number = 3;//1
                     // }else{
-                    //     number = 2;
+                    //     number = 3;//2
                     // }
 
                     //ACTUAL TERRAIn
                     if j > max {
-                        if j < water_level{
+                        if j < WATER_LEVEL{
                             number = 3;
                         }else{
                             number = 240;
@@ -95,7 +94,7 @@ impl Chunk{
                         if j <= 7 {
                             number = 1;
                         }else if j == max {
-                            if j > water_level + 2{
+                            if j > WATER_LEVEL + 2{
                                 number = 0;
                             }else{
                                 number = 6;
@@ -132,7 +131,6 @@ impl Chunk{
             
             positions:  vec![],
             uvs:  vec![],
-            normals:  vec![],
             brightness: vec![],
             opacity: vec![],
             vao: 0,
@@ -141,7 +139,6 @@ impl Chunk{
 
             transparent_positions:  vec![],
             transparent_uvs:  vec![],
-            transparent_normals:  vec![],
             transparent_brightness: vec![],
             transparent_opacity: vec![],
             transparent_vao: 0,
@@ -156,11 +153,11 @@ impl Chunk{
 
         let position = glm::vec3(position.x + half_chunk_width - 0.5 , position.y, position.z + half_chunk_width - 0.5);
         
-        let mut x_pos = position.x.clone();
-        let mut z_pos = position.z.clone();
-        let mut y_pos = position.y.clone();
-        let x_pos_temp = position.x.clone();
-        let y_pos_temp = position.y.clone();
+        let mut x_pos = position.x;
+        let mut z_pos = position.z;
+        let mut y_pos = position.y;
+        let x_pos_temp = position.x;
+        let y_pos_temp = position.y;
 
         let perlin = Perlin::default();
         let ridged = RidgedMulti::new();
@@ -187,21 +184,22 @@ impl Chunk{
                 }
 
                 for j in 0..max_height{//{
-                    //Maybe later do air rendering
                     let number: usize;
-                    let water_level: usize = 11;
+                    const WATER_LEVEL: usize = 11;
                     // CHUNK TESTING BLOCK BREAKING
-                    // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
+                    // if j == 0{
                     //     number = 0;
+                    // }else if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
+                    //     number = 3;//0
                     // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
-                    //     number = 1;
+                    //     number = 3;//1
                     // }else{
-                    //     number = 2;
+                    //     number = 3;//2
                     // }
 
                     //ACTUAL TERRAIn
                     if j > max {
-                        if j < water_level{
+                        if j < WATER_LEVEL{
                             number = 3;
                         }else{
                             number = 240;
@@ -212,7 +210,7 @@ impl Chunk{
                         if j <= 7 {
                             number = 1;
                         }else if j == max {
-                            if j > water_level + 2{
+                            if j > WATER_LEVEL + 2{
                                 number = 0;
                             }else{
                                 number = 6;
@@ -223,21 +221,19 @@ impl Chunk{
                             number = 240;
                         }
                     }
-                    
-
                     self.blocks[i][k][j].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
+                    
                     y_pos += 1.0;
                 }
                 y_pos = y_pos_temp;
                 x_pos -= 1.0;
-                
             }
             x_pos = x_pos_temp;
             z_pos -= 1.0;
-
         }
 
-        
+        self.grid_x = grid_x;
+        self.grid_z = grid_z;
         self.position = center_position;
     }
     
@@ -245,23 +241,19 @@ impl Chunk{
         return &self.position;
     }
 
-    pub fn set_position(&mut self, position: glm::Vector3<f32>) {
-        self.position = position;
-    }
-
     pub fn get_grid(&self) -> (i32, i32){
         (self.grid_x, self.grid_z)
     }
 
     pub fn build_mesh(&mut self, block_model: &BlockModel) {
-        if self.vao != 0{
+        if self.vao != 0 || self.transparent_vao != 0{
             unsafe {
                 gl::DeleteVertexArrays(1, &self.vao);
                 gl::DeleteVertexArrays(1, &self.transparent_vao);
             }
         }
 
-        if self.vbos.0 != 0 && self.vbos.1 != 0{
+        if self.vbos.0 != 0 || self.vbos.1 != 0 || self.transparent_vbos.0 != 0 && self.transparent_vbos.1 != 0{
             unsafe {
                 gl::DeleteBuffers(1, &self.vbos.0);
                 gl::DeleteBuffers(1, &self.vbos.1);
@@ -275,7 +267,6 @@ impl Chunk{
             }
         }
         self.vertices.clear();
-        self.normals.clear();
         self.positions.clear();
         self.uvs.clear();
         self.brightness.clear();
@@ -284,7 +275,6 @@ impl Chunk{
         self.vbos = (0,0,0,0);
         self.chunk_model = (0,0,0);
 
-        self.transparent_normals.clear();
         self.transparent_positions.clear();
         self.transparent_uvs.clear();
         self.transparent_brightness.clear();
@@ -304,7 +294,7 @@ impl Chunk{
     pub fn populate_mesh(&mut self){
         
         for i in 0..self.vertices.len() {
-            if self.vertices[i].5 != true{
+            if self.vertices[i].4 != true{
                 self.positions.push(self.vertices[i].0.x);
                 self.positions.push(self.vertices[i].0.y);
                 self.positions.push(self.vertices[i].0.z);
@@ -313,11 +303,10 @@ impl Chunk{
                 self.transparent_positions.push(self.vertices[i].0.y);
                 self.transparent_positions.push(self.vertices[i].0.z);
             }
-            
         }
 
         for i in 0..self.vertices.len() {
-            if self.vertices[i].5 != true{
+            if self.vertices[i].4 != true{
                 self.uvs.push(self.vertices[i].1.x);
                 self.uvs.push(self.vertices[i].1.y);
             }else{
@@ -327,42 +316,22 @@ impl Chunk{
         }
 
         for i in 0..self.vertices.len() {
-            if self.vertices[i].5 != true{
-                self.normals.push(self.vertices[i].2.x);
-                self.normals.push(self.vertices[i].2.y);
-                self.normals.push(self.vertices[i].2.z);
+            if self.vertices[i].4 != true{
+                self.brightness.push(self.vertices[i].2);
             }else{
-                self.transparent_normals.push(self.vertices[i].2.x);
-                self.transparent_normals.push(self.vertices[i].2.y);
-                self.transparent_normals.push(self.vertices[i].2.z);
+                self.transparent_brightness.push(self.vertices[i].2);
             }
         }
 
         for i in 0..self.vertices.len() {
-            if self.vertices[i].5 != true{
-                self.brightness.push(self.vertices[i].3);
+            if self.vertices[i].4 != true{
+                self.opacity.push(self.vertices[i].3);
             }else{
-                self.transparent_brightness.push(self.vertices[i].3);
+                self.transparent_opacity.push(self.vertices[i].3);
             }
         }
-
-        for i in 0..self.vertices.len() {
-            if self.vertices[i].5 != true{
-                self.opacity.push(self.vertices[i].4);
-            }else{
-                self.transparent_opacity.push(self.vertices[i].4);
-            }
-        }
-
+        
         self.vertices.clear();
-    }
-
-    pub fn compare(&self, other_chunk: &Chunk) -> bool{
-        if self.position.x == other_chunk.position.x && self.position.y == other_chunk.position.y && self.position.z == other_chunk.position.z {
-            return true;
-        } else {
-            return false;
-        }
     }
 
     pub fn get_blocks_vector(&self) -> &Vec<Vec<Vec<block::Block>>> {
@@ -389,7 +358,6 @@ impl Chunk{
         &self.opacity
     }
 
-
     pub fn get_transparent_vertices(&self) -> &Vec<f32> {
         &self.transparent_positions
     }
@@ -404,13 +372,6 @@ impl Chunk{
 
     pub fn get_transparent_opacity(&self) -> &Vec<f32>{
         &self.transparent_opacity
-    }
-
-
-    pub fn post_put_to_gpu(&mut self) {
-        self.positions.clear();
-        self.uvs.clear();
-        self.normals.clear();
     }
 
     pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint, vbo_id_opacity: gl::types::GLuint){
