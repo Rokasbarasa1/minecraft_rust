@@ -163,7 +163,6 @@ impl Chunk{
         let blend = Blend::new(&perlin, &ridged, &fbm);
 
         let max_height = self.blocks[0][0].len();
-        let square_chunk_width = self.blocks.len();
 
         for i in 0..self.blocks.len(){  //Z line Go from positive to negative
             for k in 0..self.blocks[i].len() { //X line go from positive to negative
@@ -181,10 +180,11 @@ impl Chunk{
                     max = max_int as usize
                 }
 
-                for j in 0..max_height{//{
+                for j in 0..max_height{
                     let number: usize;
                     const WATER_LEVEL: usize = 11;
                     // CHUNK TESTING BLOCK BREAKING
+                    // let square_chunk_width = self.blocks.len();
                     // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
                     //     number = 0;
                     // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {

@@ -5,7 +5,7 @@ extern crate stopwatch;
 extern crate noise;
 pub mod render_gl;
 pub mod world;
-pub mod skybox;
+pub mod skybox; 
 use std::ffi::CString;
 //use std::io::{stdout, Write};
 
@@ -14,13 +14,14 @@ use std::ffi::CString;
 fn main() {
     //Settings
     //Current amount of textures
-    const SQUARE_CHUNK_WIDTH: usize = 16;//16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 13; //Odd numbers
-    const WINDOW_WIDTH: u32 = 960;
-    const WINDOW_HEIGHT: u32 = 540;
+    const SQUARE_CHUNK_WIDTH: usize = 10;//16;
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 15; //Odd numbers
+    const WINDOW_WIDTH: u32 = 1920;
+    const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 20;
+    const MAX_HEIGHT: usize = 100;
+    const PLAYER_MOVE_SPEED: f32 = 50.0; // Per second
 
     //Some booleans that in game keys control
     let mut mesh = false;
@@ -103,6 +104,8 @@ fn main() {
         &WORLD_GEN_SEED,
         &MAX_HEIGHT
     );
+
+    camera_pos = world::World::get_spawn_location(&world, &camera_pos, 0 as usize);
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
 
     let mut event_pump = sdl.event_pump().unwrap();
@@ -268,32 +271,50 @@ fn main() {
         {
             if keyboard_w {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos + glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+                let desired_position = camera_pos + glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
 
             if keyboard_a {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                let desired_position = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
 
             if keyboard_s {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos - glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+                let desired_position = camera_pos - glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
 
             if keyboard_d {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                let desired_position = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
 
             if keyboard_space {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                let desired_position = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
 
             if keyboard_ctrl {
                 let camera_speed = 7.0 * delta_time;
-                camera_pos = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+                let desired_position = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+                if world::World::move_to_direction(&world, &desired_position) {
+                    camera_pos = desired_position;
+                }
             }
         }
         

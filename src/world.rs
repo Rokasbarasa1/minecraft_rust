@@ -232,7 +232,7 @@ impl World{
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
 
         while glm::distance(position.clone(), end.clone()) < 6.0 {
-            let block_index = get_block(self, &end);
+            let block_index = get_block(&self, &end);
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
                 let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
                 block::Block::set_block_id(&mut block, 240); //240 is air
@@ -249,7 +249,7 @@ impl World{
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
         while glm::distance(position.clone(), end.clone()) < 6.0 {
-            let block_index = get_block_or_air(self, &end);
+            let block_index = get_block_or_air(&self, &end);
             
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
                 let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
@@ -268,10 +268,57 @@ impl World{
             ray_step(&mut end, &direction, 0.1)
         }
     }
+
+    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, ) -> bool {
+        let mut block_index = get_block(self, &desired_position);
+        if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
+            return false;
+        }
+        block_index = get_block(self, &glm::vec3(desired_position.x, desired_position.y - 1.2, desired_position.z));
+        if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
+            return false;
+        }
+        return true;
+    }
+
+    //Find where to place player above ground
+    // recursion
+    // 2 - solid block before
+    // 1 - air/no block before
+    // 0 - initial passed status
+    pub fn get_spawn_location(&self, camera_pos: &glm::Vector3<f32>, status: usize) -> glm::Vector3<f32>{
+        let block_index = get_block_or_air(self, &camera_pos);
+
+        if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
+            let block = &Chunk::get_blocks_vector(&self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
+            if Block::is_air(&block) {
+                //Go down
+                if status == 2 {
+                    return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+                }else{
+                    self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y-1.0, camera_pos.z), 1 as usize)
+                }
+            }else{
+                //Go up
+                if status == 1 {
+                    return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+                }else{
+                    self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y+1.0, camera_pos.z), 2 as usize)
+                }
+            }
+        }else{
+            //Go down
+            if status == 2 {
+                return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+            }else{
+                self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y-1.0, camera_pos.z), 1 as usize)
+            }
+        }
+    }
 }
 
 
-fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -302,8 +349,13 @@ fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usiz
             for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
                 for m in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l].len() {
                     if block::Block::is_visible(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]){
-                        let distance = glm::distance(block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone(), end.clone());
-                        if distance < (f32::powf(0.5, 2.0) + f32::powf(0.5, 2.0)).sqrt()  && min > distance{
+                        let position = block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone();
+                        let distance = glm::distance(position.clone(), end.clone());
+                        let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+                        let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
+                        let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+
+                        if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
                             index_j = j; 
                             index_l = l; 
                             index_m = m; 
@@ -320,7 +372,7 @@ fn get_block(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usiz
     }
 }
 
-fn get_block_or_air(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -349,8 +401,13 @@ fn get_block_or_air(world: & mut World, end: &glm::Vector3<f32>) -> (usize, usiz
         for j in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k]).len() {
             for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
                 for m in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l].len() {
-                    let distance = glm::distance(block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone(), end.clone());
-                    if distance < (f32::powf(0.5, 2.0) + f32::powf(0.5, 2.0)).sqrt()  && min > distance{
+                    let position = block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone();
+                    let distance = glm::distance(position.clone(), end.clone());
+                    let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+                    let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
+                    let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+
+                    if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
                         index_j = j; 
                         index_l = l; 
                         index_m = m; 
