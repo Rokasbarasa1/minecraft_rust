@@ -269,12 +269,12 @@ impl World{
         }
     }
 
-    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, ) -> bool {
+    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32 ) -> bool {
         let mut block_index = get_block(self, &desired_position);
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
             return false;
         }
-        block_index = get_block(self, &glm::vec3(desired_position.x, desired_position.y - 1.2, desired_position.z));
+        block_index = get_block(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z));
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
             return false;
         }

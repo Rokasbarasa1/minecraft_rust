@@ -20,8 +20,9 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 100;
-    const PLAYER_MOVE_SPEED: f32 = 50.0; // Per second
+    const MAX_HEIGHT: usize = 15;
+    const PLAYER_HEIGHT: f32 = 1.5;
+    // const PLAYER_MOVE_SPEED: f32 = 50.0; // Per second
 
     //Some booleans that in game keys control
     let mut mesh = false;
@@ -30,8 +31,12 @@ fn main() {
     let mut keyboard_a = false;
     let mut keyboard_s = false;
     let mut keyboard_d = false;
+
     let mut keyboard_space = false;
-    let mut keyboard_ctrl = false;
+    let mut keyboard_space_frames: usize = 0;
+    let mut touched_ground = false;
+
+    let mut keyboard_ctrl = true;
     let mut selected_block: usize = 4;
 
     // let noise = Perlin::new();
@@ -130,11 +135,15 @@ fn main() {
                         break 'main;
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        keyboard_space = true;
+                        if touched_ground == true {
+                            keyboard_space = true;
+                            keyboard_ctrl = false;
+                            touched_ground = false;
+                        }
                     }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                        keyboard_ctrl = true;
-                    }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
+                    //     keyboard_ctrl = true;
+                    // }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
                         keyboard_w = true;
                     }
@@ -186,12 +195,12 @@ fn main() {
                     
                 },
                 sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        keyboard_space = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                        keyboard_ctrl = false;
-                    }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
+                    //     keyboard_space = false;
+                    // }
+                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
+                    //     keyboard_ctrl = false;
+                    // }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
                         keyboard_w = false;
                     }
@@ -272,7 +281,7 @@ fn main() {
             if keyboard_w {
                 let camera_speed = 7.0 * delta_time;
                 let desired_position = camera_pos + glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position) {
+                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
                     camera_pos = desired_position;
                 }
             }
@@ -280,7 +289,7 @@ fn main() {
             if keyboard_a {
                 let camera_speed = 7.0 * delta_time;
                 let desired_position = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position) {
+                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
                     camera_pos = desired_position;
                 }
             }
@@ -288,7 +297,7 @@ fn main() {
             if keyboard_s {
                 let camera_speed = 7.0 * delta_time;
                 let desired_position = camera_pos - glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position) {
+                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
                     camera_pos = desired_position;
                 }
             }
@@ -296,24 +305,38 @@ fn main() {
             if keyboard_d {
                 let camera_speed = 7.0 * delta_time;
                 let desired_position = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position) {
+                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
                     camera_pos = desired_position;
                 }
             }
 
             if keyboard_space {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
-                if world::World::move_to_direction(&world, &desired_position) {
-                    camera_pos = desired_position;
+                keyboard_ctrl = false;
+                if keyboard_space_frames < 10 {
+                    let camera_speed = 7.0 * delta_time;
+                    let desired_position = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                    if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
+                        camera_pos = desired_position;
+                        keyboard_space_frames += 1;
+                    }else{
+                        keyboard_space = false;
+                        keyboard_ctrl = true;
+                        keyboard_space_frames = 0;
+                    }
+                }else{
+                    keyboard_space = false;
+                    keyboard_ctrl = true;
+                    keyboard_space_frames = 0;
                 }
             }
 
             if keyboard_ctrl {
                 let camera_speed = 7.0 * delta_time;
                 let desired_position = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
-                if world::World::move_to_direction(&world, &desired_position) {
+                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
                     camera_pos = desired_position;
+                }else{
+                    touched_ground = true;
                 }
             }
         }
@@ -365,7 +388,7 @@ fn main() {
             gl::BindVertexArray(0);
 
         }
-        time_increment += 0.04;
+        time_increment += 0.02;
         window.gl_swap_window();
         {
             // println!("Position: X:{} Z:{}", camera_pos.x, camera_pos.z);
