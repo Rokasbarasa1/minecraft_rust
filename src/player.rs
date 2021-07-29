@@ -33,12 +33,14 @@ pub struct Player {
 
     keyboard_ctrl: bool,
     selected_block: usize,
+
+    acceleration: f32
 }
 
 impl Player{
     pub fn new(world: &mut world::World, player_height: f32, camera_pos: glm::Vector3<f32> ) -> Player {
         let mut player = Player{
-            camera_pos: glm::vec3(0.0, 0.0, 0.0),
+            camera_pos: camera_pos,
             camera_front: glm::vec3(0.0, 0.0, -1.0),
             camera_up: glm::vec3(0.0, 1.0, 0.0),
 
@@ -67,7 +69,9 @@ impl Player{
             touched_ground: false,
         
             keyboard_ctrl: true,
-            selected_block: 4
+            selected_block: 4,
+
+            acceleration: 0.0
         };
 
         player.camera_pos = world::World::get_spawn_location(&world, &player.camera_pos, 0 as usize);
@@ -103,11 +107,9 @@ impl Player{
                             self.keyboard_space = true;
                             self.keyboard_ctrl = false;
                             self.touched_ground = false;
+                            self.acceleration = 1.5
                         }
                     }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                    //     keyboard_ctrl = true;
-                    // }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
                         self.keyboard_w = true;
                     }
@@ -146,25 +148,8 @@ impl Player{
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Num7 {
                         self.selected_block = 6;
                     }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num8 {
-                    //     selected_block = 7;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num9 {
-                    //     selected_block = 8;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num0 {
-                    //     selected_block = 9;
-                    // }
-
-                    
                 },
                 sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                    //     keyboard_space = false;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                    //     keyboard_ctrl = false;
-                    // }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
                         self.keyboard_w = false;
                     }
@@ -278,29 +263,36 @@ impl Player{
                 self.keyboard_ctrl = false;
                 if self.keyboard_space_frames < 10 {
                     let camera_speed = 7.0 * self.delta_time;
-                    let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                    let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed * self.acceleration, 0.0);
                     if world::World::move_to_direction(&world, &desired_position, self.player_height) {
                         self.camera_pos = desired_position;
                         self.keyboard_space_frames += 1;
+                        self.acceleration += -0.15
                     }else{
                         self.keyboard_space = false;
                         self.keyboard_ctrl = true;
                         self.keyboard_space_frames = 0;
+                        self.acceleration = 0.2
                     }
                 }else{
                     self.keyboard_space = false;
                     self.keyboard_ctrl = true;
                     self.keyboard_space_frames = 0;
+                    self.acceleration = 0.2
                 }
             }
 
             if self.keyboard_ctrl {
                 let camera_speed = 7.0 * self.delta_time;
-                let desired_position = self.camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+                let desired_position = self.camera_pos - glm::vec3(0.0, camera_speed * self.acceleration, 0.0);
                 if world::World::move_to_direction(&world, &desired_position, self.player_height) {
                     self.camera_pos = desired_position;
+                    if self.acceleration < 5.0{
+                        self.acceleration += 0.15
+                    }
                 }else{
                     self.touched_ground = true;
+                    self.acceleration = 0.0;
                 }
             }
         }
