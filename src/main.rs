@@ -5,6 +5,7 @@ extern crate stopwatch;
 extern crate noise;
 pub mod render_gl;
 pub mod world;
+pub mod player;
 pub mod skybox; 
 use std::ffi::CString;
 //use std::io::{stdout, Write};
@@ -24,21 +25,6 @@ fn main() {
     const PLAYER_HEIGHT: f32 = 1.5;
     // const PLAYER_MOVE_SPEED: f32 = 50.0; // Per second
 
-    //Some booleans that in game keys control
-    let mut mesh = false;
-    let mut mouse_button_clicked = false;
-    let mut keyboard_w = false;
-    let mut keyboard_a = false;
-    let mut keyboard_s = false;
-    let mut keyboard_d = false;
-
-    let mut keyboard_space = false;
-    let mut keyboard_space_frames: usize = 0;
-    let mut touched_ground = false;
-
-    let mut keyboard_ctrl = true;
-    let mut selected_block: usize = 4;
-
     // let noise = Perlin::new();
     // noise.set_seed(WORLD_GEN_SEED);
 
@@ -55,24 +41,6 @@ fn main() {
         .unwrap();
     let _gl_context = window.gl_create_context().unwrap();
     let _gl = gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
-
-    //Camera
-    let mut camera_pos = glm::vec3(0.0, 0.0, 0.0);
-    let mut camera_front = glm::vec3(0.0, 0.0, -1.0);
-    let camera_up = glm::vec3(0.0, 1.0, 0.0);
-
-    let mut yaw = -90.0;
-    let mut pitch = 0.0;
-    let mut fov = 85.0;
-
-    //Mouse state
-    let mut first_mouse = true;
-    let mut last_x = 800.0 / 2.0;
-    let mut last_y = 600.0 / 2.0;
-
-    //Timing
-    let mut delta_time = 0.0;
-    let mut last_frame = 0.0;
 
     //Set mouse to be bound in the window and infinite movement
     sdl.mouse().capture(true);
@@ -99,7 +67,7 @@ fn main() {
 
     
     let mut time_increment: f32 = 0.0;
-
+    let mut camera_pos = glm::vec3(0.0, 0.0, 0.0);
     let mut world: world::World = world::World::new(
         &camera_pos, 
         &SQUARE_CHUNK_WIDTH, 
@@ -109,257 +77,38 @@ fn main() {
         &WORLD_GEN_SEED,
         &MAX_HEIGHT
     );
+    let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos.clone());
 
-    camera_pos = world::World::get_spawn_location(&world, &camera_pos, 0 as usize);
+    
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
 
     let mut event_pump = sdl.event_pump().unwrap();
     'main: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                sdl2::event::Event::Quit { .. } => break 'main, 
-                sdl2::event::Event::KeyDown { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    //Change to polygon mesh mode
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Q {
-                        unsafe {
-                            if !mesh {
-                                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-                                mesh = true;
-                            } else{
-                                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-                                mesh = false;
-                            }
-                        }
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Escape {
-                        break 'main;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        if touched_ground == true {
-                            keyboard_space = true;
-                            keyboard_ctrl = false;
-                            touched_ground = false;
-                        }
-                    }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                    //     keyboard_ctrl = true;
-                    // }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::W {
-                        keyboard_w = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::S {
-                        keyboard_s = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::A {
-                        keyboard_a = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::D {
-                        keyboard_d = true;
-                    }
 
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::F {
-                        world::World::destroy_block(&mut world, &camera_front, &camera_pos);
-                    }
-                    
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num1 {
-                        selected_block = 0;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num2 {
-                        selected_block = 1;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num3 {
-                        selected_block = 2;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num4 {
-                        selected_block = 3;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num5 {
-                        selected_block = 4;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num6 {
-                        selected_block = 5;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num7 {
-                        selected_block = 6;
-                    }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num8 {
-                    //     selected_block = 7;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num9 {
-                    //     selected_block = 8;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Num0 {
-                    //     selected_block = 9;
-                    // }
-
-                    
-                },
-                sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                    //     keyboard_space = false;
-                    // }
-                    // if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                    //     keyboard_ctrl = false;
-                    // }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::W {
-                        keyboard_w = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::S {
-                        keyboard_s = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::A {
-                        keyboard_a = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::D {
-                        keyboard_d = false;
-                    }
-                }
-                
-                sdl2::event::Event::MouseMotion { timestamp: _, window_id: _, which: _, mousestate: _, x, y, xrel: _, yrel: _ } => {
-                    if first_mouse
-                    {
-                        last_x = x as f32;
-                        last_y = y as f32;
-                        first_mouse = false;
-                    }
-
-                    let mut xoffset = x as f32 - last_x;
-                    let mut yoffset = last_y - y as f32; // reversed since y-coordinates go from bottom to top
-                    last_x = x as f32;
-                    last_y = y as f32;
-
-                    let sensitivity = 0.1; // change this value to your liking
-                    xoffset *= sensitivity;
-                    yoffset *= sensitivity;
-
-                    yaw += xoffset;
-                    pitch += yoffset;
-
-                    //make sure that when pitch is out of bounds, screen doesn't get flipped
-                    if pitch > 89.0 {
-                        pitch = 89.0;
-                    }
-                    if pitch < -89.0 {
-                        pitch = -89.0;
-                    }
-
-                    let mut front = glm::vec3(0.0, 0.0, 0.0);
-                    front.x = glm::cos(glm::radians(yaw)) * glm::cos(glm::radians(pitch));
-                    front.y = glm::sin(glm::radians(pitch));
-                    front.z = glm::sin(glm::radians(yaw)) * glm::cos(glm::radians(pitch));
-                    camera_front = glm::normalize(front);
-                },
-                sdl2::event::Event::MouseWheel { timestamp: _, window_id: _, which: _, x: _, y, direction: _ } => {
-                    if fov >= 1.0 && fov <= 90.0 {
-                        fov -= y as f32;
-                    }  
-                    if  fov < 1.0 {
-                        fov = 1.0;
-                    }   
-                    if  fov > 90.0 {
-                        fov = 90.0;
-                    }
-                },
-                sdl2::event::Event::MouseButtonDown { timestamp: _, window_id: _, which: _, mouse_btn, clicks: _, x: _, y: _ } =>{
-                    if !mouse_button_clicked {
-                        if mouse_btn.eq(&sdl2::mouse::MouseButton::Left){
-                            world::World::destroy_block(&mut world, &camera_front, &camera_pos);
-                        } else {
-                            world::World::place_block(&mut world, &camera_front, &camera_pos, selected_block);
-                        }
-                        mouse_button_clicked = true;
-                    }
-                },
-                sdl2::event::Event::MouseButtonUp { timestamp: _, window_id: _, which: _, mouse_btn: _, clicks: _, x: _, y: _ } =>{
-                    mouse_button_clicked = false;
-                },
-                _ => {}
-            }
-        }     
-        //Key control
-        {
-            if keyboard_w {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos + glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                    camera_pos = desired_position;
-                }
-            }
-
-            if keyboard_a {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos - glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                    camera_pos = desired_position;
-                }
-            }
-
-            if keyboard_s {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos - glm::vec3(camera_speed * camera_front.x, 0.0, camera_speed * camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                    camera_pos = desired_position;
-                }
-            }
-
-            if keyboard_d {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos + glm::normalize(glm::cross(camera_front, camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                    camera_pos = desired_position;
-                }
-            }
-
-            if keyboard_space {
-                keyboard_ctrl = false;
-                if keyboard_space_frames < 10 {
-                    let camera_speed = 7.0 * delta_time;
-                    let desired_position = camera_pos + glm::vec3(0.0, camera_speed, 0.0);
-                    if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                        camera_pos = desired_position;
-                        keyboard_space_frames += 1;
-                    }else{
-                        keyboard_space = false;
-                        keyboard_ctrl = true;
-                        keyboard_space_frames = 0;
-                    }
-                }else{
-                    keyboard_space = false;
-                    keyboard_ctrl = true;
-                    keyboard_space_frames = 0;
-                }
-            }
-
-            if keyboard_ctrl {
-                let camera_speed = 7.0 * delta_time;
-                let desired_position = camera_pos - glm::vec3(0.0, camera_speed, 0.0);
-                if world::World::move_to_direction(&world, &desired_position, PLAYER_HEIGHT) {
-                    camera_pos = desired_position;
-                }else{
-                    touched_ground = true;
-                }
-            }
-        }
+        let close_game: bool = player.handle_events(&mut world, &mut event_pump);
         
+        if close_game {
+            break 'main
+        }
         //Rendering
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); 
             
 
             let current_frame = time_increment as f32;
-            delta_time = current_frame - last_frame;
-            last_frame = current_frame;
+            player.delta_time = current_frame - player.last_frame;
+            player.last_frame = current_frame;
             
             shader_program.set_used();
-            let projection = glm::ext::perspective(glm::radians(fov), (WINDOW_WIDTH as f32)/(WINDOW_HEIGHT as f32), 0.1, 5000.0);
+            let projection = glm::ext::perspective(glm::radians(player.fov), (WINDOW_WIDTH as f32)/(WINDOW_HEIGHT as f32), 0.1, 5000.0);
             let projection_loc = gl::GetUniformLocation(shader_program.id(), "projection".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, &projection[0][0]);
 
-            let view = glm::ext::look_at(camera_pos, camera_pos + camera_front, camera_up);
+            let view = glm::ext::look_at(player.camera_pos, player.camera_pos + player.camera_front, player.camera_up);
             let view_loc = gl::GetUniformLocation(shader_program.id(), "view".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
-            world::World::draw(&mut world,&camera_pos);
+            world::World::draw(&mut world, &player.camera_pos);
 
 
 
