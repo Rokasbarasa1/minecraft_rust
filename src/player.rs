@@ -252,7 +252,6 @@ impl Player{
             if self.keyboard_w {
                 let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos + glm::vec3(camera_speed * self.camera_front.x, 0.0, camera_speed * self.camera_front.z);
-
                 let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
@@ -324,8 +323,6 @@ impl Player{
             if self.keyboard_space {
                 
                 if !self.in_liquid{
-                    // In not water
-                    println!("In not water");
                     self.keyboard_ctrl = false;
                     if self.keyboard_space_frames < 10 {
                         let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;

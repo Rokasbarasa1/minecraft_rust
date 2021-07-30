@@ -274,11 +274,11 @@ impl World{
     // 1 for liquid
     // 2 solid block
     pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32 ) -> usize {
-
+        let mut margin_for_player: f32 = 0.25;
         let mut block_up:usize = 0;
         let mut block_down:usize = 0; 
 
-        let mut block_index = get_block_or_water(self, &desired_position);
+        let mut block_index = get_block_or_water(self, &desired_position, margin_for_player);
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
             if self.chunk_grid[block_index.0][block_index.1].blocks[block_index.2][block_index.3][block_index.4].is_water(){
                 block_up = 1;
@@ -287,7 +287,7 @@ impl World{
             }
         }
 
-        block_index = get_block_or_water(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z));
+        block_index = get_block_or_water(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z), margin_for_player);
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
             if self.chunk_grid[block_index.0][block_index.1].blocks[block_index.2][block_index.3][block_index.4].is_water(){
                 block_down = 1;
@@ -402,7 +402,7 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
     }
 }
 
-fn get_block_or_water(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player: f32) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -439,7 +439,7 @@ fn get_block_or_water(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, 
                         let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
                         let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
 
-                        if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
+                        if distance < min && distance_x < 0.5 + margin_for_player && distance_y < 0.5 && distance_z < 0.5 + margin_for_player{
                             index_j = j; 
                             index_l = l; 
                             index_m = m; 
