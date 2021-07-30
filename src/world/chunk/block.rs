@@ -11,10 +11,10 @@ pub enum BlockId{
 }
 
 pub struct Block {
-    position: glm::Vector3<f32>,
-    id: usize,
-    visible: bool,
-    sides: Vec<bool>
+    pub position: glm::Vector3<f32>,
+    pub id: usize,
+    pub visible: bool,
+    pub sides: Vec<bool>
 }
 
 impl Block {

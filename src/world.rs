@@ -11,14 +11,14 @@ use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
 pub struct World {
-    chunk_width: usize,
-    loaded_textures: gl::types::GLuint,
-    chunk_grid: Vec<Vec<Chunk>>,
-    block_model: BlockModel,
-    view_distance: f32,
-    program: render_gl::Program,
-    unbuilt_models: Vec<(usize, usize, bool)>,
-    index: usize
+    pub chunk_width: usize,
+    pub loaded_textures: gl::types::GLuint,
+    pub chunk_grid: Vec<Vec<Chunk>>,
+    pub block_model: BlockModel,
+    pub view_distance: f32,
+    pub program: render_gl::Program,
+    pub unbuilt_models: Vec<(usize, usize, bool)>,
+    pub index: usize
 }
 
 impl World{
@@ -269,20 +269,49 @@ impl World{
         }
     }
 
-    //
-    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32 ) -> bool {
-        let mut block_index = get_block(self, &desired_position);
+    // returns values based on what the block type 
+    // 0 for nothing
+    // 1 for liquid
+    // 2 solid block
+    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32 ) -> usize {
+
+        let mut block_up:usize = 0;
+        let mut block_down:usize = 0; 
+
+        let mut block_index = get_block_or_water(self, &desired_position);
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
-            return false;
+            if self.chunk_grid[block_index.0][block_index.1].blocks[block_index.2][block_index.3][block_index.4].is_water(){
+                block_up = 1;
+            }else{
+                block_up = 2;
+            }
         }
-        block_index = get_block(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z));
+
+        block_index = get_block_or_water(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z));
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
-            return false;
+            if self.chunk_grid[block_index.0][block_index.1].blocks[block_index.2][block_index.3][block_index.4].is_water(){
+                block_down = 1;
+            }else{
+                block_down = 2;
+            }
         }
-        return true;
+
+
+        if block_up == 1 && block_down == 2{
+            // println!("In water/ on block");
+            return 3;
+        }else if block_up == 2 || block_down == 2{
+            return 2;
+        }else if block_up == 1 || block_down == 1{
+            // println!("In water");
+            return 1;
+        } else {
+
+            return 0;
+        }
     }
 
-    //Find where to place player above ground
+    // Find where to place player above ground
     // recursion
     // 2 - solid block before
     // 1 - air/no block before
@@ -350,6 +379,60 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
             for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
                 for m in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l].len() {
                     if block::Block::is_visible(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]) && !block::Block::is_water(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]){
+                        let position = block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone();
+                        let distance = glm::distance(position.clone(), end.clone());
+                        let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+                        let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
+                        let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+
+                        if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
+                            index_j = j; 
+                            index_l = l; 
+                            index_m = m; 
+                            min = distance;
+                            return (index_i,index_k,index_j,index_l,index_m)
+                        }
+                    }
+                }
+            }
+        }
+        return (index_i,index_k,index_j,index_l,index_m);
+    }else{
+        return (index_i,index_k,index_j,index_l,index_m);
+    }
+}
+
+fn get_block_or_water(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+    let mut index_i: usize = 9999;
+    let mut index_k: usize = 9999;
+    let mut index_j: usize = 9999; 
+    let mut index_l: usize = 9999; 
+    let mut index_m: usize = 9999;
+    let mut min:f32 = 9999.0;
+    for i in 0..world.chunk_grid.len(){
+        for k in 0..world.chunk_grid[i].len(){
+            let position = Chunk::get_position(&world.chunk_grid[i][k]).clone();
+            let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
+            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
+            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+
+            if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
+                min = distance;
+                index_i = i;
+                index_k = k;
+                break;
+            }
+        }
+        if index_i != 9999 {
+            break;
+        }
+    }
+    if min != 9999.0{
+        min = 9999.0;
+        for j in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k]).len() {
+            for l in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j].len() {
+                for m in 0..Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l].len() {
+                    if block::Block::is_visible(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]) || block::Block::is_water(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]){
                         let position = block::Block::get_position(&Chunk::get_blocks_vector(&world.chunk_grid[index_i][index_k])[j][l][m]).clone();
                         let distance = glm::distance(position.clone(), end.clone());
                         let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();

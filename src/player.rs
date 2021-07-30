@@ -18,23 +18,27 @@ pub struct Player {
     pub delta_time: f32,
     pub last_frame: f32,
 
-    player_height: f32,
-    mesh: bool,
+    pub player_height: f32,
+    pub mesh: bool,
 
-    mouse_button_clicked: bool,
-    keyboard_w: bool,
-    keyboard_a: bool,
-    keyboard_s: bool,
-    keyboard_d: bool,
+    pub mouse_button_clicked: bool,
+    pub keyboard_w: bool,
+    pub keyboard_a: bool,
+    pub keyboard_s: bool,
+    pub keyboard_d: bool,
 
-    keyboard_space: bool,
-    keyboard_space_frames: usize,
-    touched_ground: bool,
+    pub keyboard_space: bool,
+    pub keyboard_space_frames: usize,
+    pub touched_ground: bool,
 
-    keyboard_ctrl: bool,
-    selected_block: usize,
+    pub keyboard_ctrl: bool,
+    pub selected_block: usize,
 
-    acceleration: f32
+    pub acceleration_result: f32,
+    pub acceleration: f32, // More like bonus speed after adding acceleration
+
+    pub liquid_speed_modifyer: f32,
+    pub in_liquid: bool,
 }
 
 impl Player{
@@ -71,7 +75,10 @@ impl Player{
             keyboard_ctrl: true,
             selected_block: 4,
 
-            acceleration: 0.0
+            acceleration_result: 0.0,
+            acceleration: 0.15,
+            liquid_speed_modifyer: 1.0,
+            in_liquid: false
         };
 
         player.camera_pos = world::World::get_spawn_location(&world, &player.camera_pos, 0 as usize);
@@ -101,13 +108,18 @@ impl Player{
                             }
                         }
                     }
-
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        if self.touched_ground == true {
+                        if self.in_liquid{
+                            self.keyboard_space = true;
+                            self.touched_ground = false;
+                            self.keyboard_ctrl = false;
+                        }
+                        
+                        if self.touched_ground && !self.in_liquid{
                             self.keyboard_space = true;
                             self.keyboard_ctrl = false;
                             self.touched_ground = false;
-                            self.acceleration = 1.5
+                            self.acceleration_result = 1.5
                         }
                     }
                     if scancode.unwrap() == sdl2::keyboard::Scancode::W {
@@ -122,11 +134,9 @@ impl Player{
                     if scancode.unwrap() == sdl2::keyboard::Scancode::D {
                         self.keyboard_d = true;
                     }
-
                     if scancode.unwrap() == sdl2::keyboard::Scancode::F {
                         world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
                     }
-                    
                     if scancode.unwrap() == sdl2::keyboard::Scancode::Num1 {
                         self.selected_block = 0;
                     }
@@ -162,8 +172,14 @@ impl Player{
                     if scancode.unwrap() == sdl2::keyboard::Scancode::D {
                         self.keyboard_d = false;
                     }
-                }
-                
+                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
+                        if self.in_liquid{
+                            // Space up
+                            self.keyboard_space = false;
+                            self.keyboard_ctrl = true;
+                        }
+                    }
+                },
                 sdl2::event::Event::MouseMotion { timestamp: _, window_id: _, which: _, mousestate: _, x, y, xrel: _, yrel: _ } => {
                     if self.first_mouse
                     {
@@ -226,76 +242,176 @@ impl Player{
             }
         }     
         
+        if self.in_liquid{
+            self.liquid_speed_modifyer = 0.45;
+        }else{
+            self.liquid_speed_modifyer = 1.0;
+        }
+
         {
             if self.keyboard_w {
-                let camera_speed = 7.0 * self.delta_time;
+                let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos + glm::vec3(camera_speed * self.camera_front.x, 0.0, camera_speed * self.camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position, self.player_height) {
+
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
+                    if move_location == 1{
+                        self.in_liquid = true;
+                    }else{
+                        if self.in_liquid {
+                            self.touched_ground = false;
+                        }
+                        self.in_liquid = false;
+                    }
                 }
             }
 
             if self.keyboard_a {
-                let camera_speed = 7.0 * self.delta_time;
+                let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos - glm::normalize(glm::cross(self.camera_front, self.camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position, self.player_height) {
+                
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
+                    if move_location == 1{
+                        self.in_liquid = true;
+                    }else{
+                        if self.in_liquid {
+                            self.touched_ground = false;
+                        }
+                        self.in_liquid = false;
+                    }
                 }
             }
 
             if self.keyboard_s {
-                let camera_speed = 7.0 * self.delta_time;
+                let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos - glm::vec3(camera_speed * self.camera_front.x, 0.0, camera_speed * self.camera_front.z);
-                if world::World::move_to_direction(&world, &desired_position, self.player_height) {
+                
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
+                    if move_location == 1{
+                        self.in_liquid = true;
+                    }else{
+                        if self.in_liquid {
+                            self.touched_ground = false;
+                        }
+                        self.in_liquid = false;
+                    }
                 }
             }
 
             if self.keyboard_d {
-                let camera_speed = 7.0 * self.delta_time;
+                let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos + glm::normalize(glm::cross(self.camera_front, self.camera_up)) * camera_speed;
-                if world::World::move_to_direction(&world, &desired_position, self.player_height) {
+                
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
+                    if move_location == 1{
+                        self.in_liquid = true;
+                    }else{
+                        if self.in_liquid {
+                            self.touched_ground = false;
+                        }
+                        self.in_liquid = false;
+                    }
                 }
             }
 
             if self.keyboard_space {
-                self.keyboard_ctrl = false;
-                if self.keyboard_space_frames < 10 {
-                    let camera_speed = 7.0 * self.delta_time;
-                    let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed * self.acceleration, 0.0);
-                    if world::World::move_to_direction(&world, &desired_position, self.player_height) {
-                        self.camera_pos = desired_position;
-                        self.keyboard_space_frames += 1;
-                        self.acceleration += -0.15
+                
+                if !self.in_liquid{
+                    // In not water
+                    println!("In not water");
+                    self.keyboard_ctrl = false;
+                    if self.keyboard_space_frames < 10 {
+                        let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
+                        let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed * self.acceleration_result, 0.0);
+                        
+                        let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                        if move_location == 0 || move_location == 1 {
+                            self.camera_pos = desired_position;
+                            self.keyboard_space_frames += 1;
+                            self.acceleration_result += self.acceleration * (-1.0);
+                            if move_location == 1{
+                                self.in_liquid = true;
+                            }else{
+                                if self.in_liquid {
+                                    self.touched_ground = false;
+                                }
+                                self.in_liquid = false;
+                            }
+                        }else{
+                            self.keyboard_space = false;
+                            self.keyboard_ctrl = true;
+                            self.keyboard_space_frames = 0;
+                            self.acceleration_result = 0.2;
+                        }
                     }else{
                         self.keyboard_space = false;
                         self.keyboard_ctrl = true;
                         self.keyboard_space_frames = 0;
-                        self.acceleration = 0.2
+                        self.acceleration_result = 0.2
                     }
-                }else{
-                    self.keyboard_space = false;
-                    self.keyboard_ctrl = true;
-                    self.keyboard_space_frames = 0;
-                    self.acceleration = 0.2
+                }else if self.in_liquid{
+                    let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
+                    let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed, 0.0);
+                    
+                    let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                    if move_location == 0 || move_location == 1 {
+                        
+                        if move_location == 3{
+                            self.in_liquid = true;
+                        }else {
+                            self.camera_pos = desired_position;
+                            if move_location == 1{
+                                self.in_liquid = true;
+                                self.camera_pos = desired_position;
+                            }else{
+                                if self.in_liquid {
+                                    self.touched_ground = false;
+                                }
+                                self.keyboard_space = false;
+                                self.keyboard_ctrl = true;
+                                self.in_liquid = false;
+                            }
+                        }
+                    }
                 }
             }
 
             if self.keyboard_ctrl {
-                let camera_speed = 7.0 * self.delta_time;
-                let desired_position = self.camera_pos - glm::vec3(0.0, camera_speed * self.acceleration, 0.0);
-                if world::World::move_to_direction(&world, &desired_position, self.player_height) {
+                
+                let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
+                let desired_position;
+                if self.in_liquid{
+                    desired_position = self.camera_pos - glm::vec3(0.0, camera_speed, 0.0);
+                }else{
+                    desired_position = self.camera_pos - glm::vec3(0.0, camera_speed * self.acceleration_result, 0.0);
+                }
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
-                    if self.acceleration < 5.0{
-                        self.acceleration += 0.15
+                    if self.acceleration_result < 5.0 && !self.in_liquid{
+                        self.acceleration_result += self.acceleration
+                    }
+
+                    if move_location == 1{
+                        self.in_liquid = true;
+                    }else{
+                        self.in_liquid = false;
                     }
                 }else{
                     self.touched_ground = true;
-                    self.acceleration = 0.0;
+                    self.acceleration_result = 0.0;
                 }
             }
         }
+
+        // println!("{}", self.in_liquid);
         return close_game;
     }
 }

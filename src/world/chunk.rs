@@ -7,28 +7,27 @@ pub mod block;
 use noise::{ Blend, Fbm, RidgedMulti};
 
 pub struct Chunk {
-    position: glm::Vector3<f32>,
-    blocks: Vec<Vec<Vec<block::Block>>>,
-    grid_x: i32,
-    grid_z: i32,
-    vertices: Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>,
+    pub position: glm::Vector3<f32>,
+    pub blocks: Vec<Vec<Vec<block::Block>>>,
+    pub grid_x: i32,
+    pub grid_z: i32,
+    pub vertices: Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>,
 
-    positions: Vec<f32>,
-    uvs: Vec<f32>,
-    brightness: Vec<f32>,
-    opacity: Vec<f32>,
-    vao: gl::types::GLuint,
-    vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+    pub positions: Vec<f32>,
+    pub uvs: Vec<f32>,
+    pub brightness: Vec<f32>,
+    pub opacity: Vec<f32>,
+    pub vao: gl::types::GLuint,
+    pub vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    pub chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 
-    transparent_positions: Vec<f32>,
-    transparent_uvs: Vec<f32>,
-    transparent_brightness: Vec<f32>,
-    transparent_opacity: Vec<f32>,
-    transparent_vao: gl::types::GLuint,
-    transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
-
+    pub transparent_positions: Vec<f32>,
+    pub transparent_uvs: Vec<f32>,
+    pub transparent_brightness: Vec<f32>,
+    pub transparent_opacity: Vec<f32>,
+    pub transparent_vao: gl::types::GLuint,
+    pub transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 }
 
 impl Chunk{
