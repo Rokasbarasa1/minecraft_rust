@@ -245,19 +245,23 @@ impl World{
         }
     }
 
-    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: usize){
+    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: usize, player_height: f32 ){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
         while glm::distance(position.clone(), end.clone()) < 6.0 {
             let block_index = get_block_or_air(&self, &end);
             
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
-                let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
-                
+
+                let block = &Chunk::get_blocks_vector(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
+
                 if Block::is_air(&block) || Block::is_water(&block) {
                     last_air_block_index = block_index.clone();
                 }else{
-                    
+                    if is_player_in_block_location(self, camera_pos, player_height, last_air_block_index.0, last_air_block_index.1, last_air_block_index.2, last_air_block_index.3, last_air_block_index.4){
+                        break;
+                    }
+
                     let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[last_air_block_index.0][last_air_block_index.1])[last_air_block_index.2][last_air_block_index.3][last_air_block_index.4];
                     Block::set_visible(&mut block);
                     block::Block::set_block_id(&mut block, selected_block);
@@ -273,8 +277,7 @@ impl World{
     // 0 for nothing
     // 1 for liquid
     // 2 solid block
-    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32 ) -> usize {
-        let mut margin_for_player: f32 = 0.25;
+    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32, margin_for_player: f32 ) -> usize {
         let mut block_up:usize = 0;
         let mut block_down:usize = 0; 
 
@@ -347,6 +350,19 @@ impl World{
     }
 }
 
+fn is_player_in_block_location(world: &World, camera_pos: &glm::Vector3<f32>, player_height: f32,  i: usize, k:usize, j: usize, l: usize, m: usize) -> bool{
+    let block_index_up = get_block_or_air(world, &camera_pos);
+    let block_index_down = get_block_or_air(world, &glm::vec3(camera_pos.x, camera_pos.y - player_height, camera_pos.z));
+
+    if block_index_up.0 == i && block_index_up.1 == k && block_index_up.2 == j && block_index_up.3 == l && block_index_up.4 == m{
+        return true;
+    }
+
+    if block_index_down.0 == i && block_index_down.1 == k && block_index_down.2 == j && block_index_down.3 == l && block_index_down.4 == m{
+        return true;
+    }
+    return false;
+}
 
 fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;

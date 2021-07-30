@@ -39,6 +39,8 @@ pub struct Player {
 
     pub liquid_speed_modifyer: f32,
     pub in_liquid: bool,
+    pub margin_for_player: f32,
+
 }
 
 impl Player{
@@ -78,7 +80,9 @@ impl Player{
             acceleration_result: 0.0,
             acceleration: 0.15,
             liquid_speed_modifyer: 1.0,
-            in_liquid: false
+            in_liquid: false,
+            margin_for_player: 0.25,
+
         };
 
         player.camera_pos = world::World::get_spawn_location(&world, &player.camera_pos, 0 as usize);
@@ -230,7 +234,7 @@ impl Player{
                         if mouse_btn.eq(&sdl2::mouse::MouseButton::Left){
                             world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
                         } else {
-                            world::World::place_block(world, &self.camera_front, &self.camera_pos, self.selected_block);
+                            world::World::place_block(world, &self.camera_front, &self.camera_pos, self.selected_block, self.player_height);
                         }
                         self.mouse_button_clicked = true;
                     }
@@ -252,7 +256,7 @@ impl Player{
             if self.keyboard_w {
                 let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos + glm::vec3(camera_speed * self.camera_front.x, 0.0, camera_speed * self.camera_front.z);
-                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
                     if move_location == 1{
@@ -270,7 +274,7 @@ impl Player{
                 let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos - glm::normalize(glm::cross(self.camera_front, self.camera_up)) * camera_speed;
                 
-                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
                     if move_location == 1{
@@ -288,7 +292,7 @@ impl Player{
                 let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos - glm::vec3(camera_speed * self.camera_front.x, 0.0, camera_speed * self.camera_front.z);
                 
-                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
                     if move_location == 1{
@@ -306,7 +310,7 @@ impl Player{
                 let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                 let desired_position = self.camera_pos + glm::normalize(glm::cross(self.camera_front, self.camera_up)) * camera_speed;
                 
-                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
                     if move_location == 1{
@@ -328,7 +332,7 @@ impl Player{
                         let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                         let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed * self.acceleration_result, 0.0);
                         
-                        let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                        let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                         if move_location == 0 || move_location == 1 {
                             self.camera_pos = desired_position;
                             self.keyboard_space_frames += 1;
@@ -357,7 +361,7 @@ impl Player{
                     let camera_speed = 7.0 * self.delta_time * self.liquid_speed_modifyer;
                     let desired_position = self.camera_pos + glm::vec3(0.0, camera_speed, 0.0);
                     
-                    let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                    let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                     if move_location == 0 || move_location == 1 {
                         
                         if move_location == 3{
@@ -389,7 +393,7 @@ impl Player{
                 }else{
                     desired_position = self.camera_pos - glm::vec3(0.0, camera_speed * self.acceleration_result, 0.0);
                 }
-                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height);
+                let move_location = world::World::move_to_direction(&world, &desired_position, self.player_height, self.margin_for_player);
                 if move_location == 0 || move_location == 1 {
                     self.camera_pos = desired_position;
                     if self.acceleration_result < 5.0 && !self.in_liquid{
