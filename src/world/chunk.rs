@@ -1,10 +1,11 @@
 extern crate noise;
-
-use noise::{NoiseFn, Perlin};
+use rand::Rng;
+use rand::rngs::StdRng;
+use rand::{SeedableRng};
+use noise::{Blend, Fbm, NoiseFn, Perlin, RidgedMulti, Seedable, Billow, BasicMulti, Worley, Value, SuperSimplex, OpenSimplex, HybridMulti};
 
 use super::{block_model::BlockModel};
 pub mod block;
-use noise::{ Blend, Fbm, RidgedMulti};
 
 pub struct Chunk {
     pub position: glm::Vector3<f32>,
@@ -28,6 +29,8 @@ pub struct Chunk {
     pub transparent_vao: gl::types::GLuint,
     pub transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
     pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+
+    pub world_gen_seed: u32
 }
 
 impl Chunk{
@@ -41,10 +44,23 @@ impl Chunk{
 
         let mut blocks: Vec<Vec<Vec<block::Block>>> = vec![];
 
-        let perlin = Perlin::default();
-        let ridged = RidgedMulti::new();
-        let fbm = Fbm::new();
+        //TODO: ADD NOISE FUNC TO STRUCT PARAMETERS
+
+        let perlin = Perlin::new().set_seed(*world_gen_seed);
+        let ridged = RidgedMulti::new().set_seed(*world_gen_seed);
+        let fbm = Fbm::new().set_seed(*world_gen_seed);
         let blend = Blend::new(&perlin, &ridged, &fbm);
+        // let billow = Billow::default().set_seed(*world_gen_seed);
+        // let basic_multi = BasicMulti::default().set_seed(*world_gen_seed);
+        // let blend = Blend::new(&blend1, &billow, &billow);
+        // let worley = Worley::default().set_seed(*world_gen_seed);   
+        // let value = Value::default().set_seed(*world_gen_seed);   
+        // let super_simplex = SuperSimplex::default().set_seed(*world_gen_seed);   
+        // let open_simplex = OpenSimplex::default().set_seed(*world_gen_seed);   
+        // let hybrid_multi = HybridMulti::default().set_seed(*world_gen_seed);   
+
+
+        let mut rng = StdRng::seed_from_u64(*world_gen_seed as u64);
 
         for i in 0..*square_chunk_width{  //Z line Go from positive to negative
             let collumn: Vec<Vec<block::Block>> = vec![];
@@ -55,7 +71,7 @@ impl Chunk{
 
                 let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.0190) as f64;
                 let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* 0.0190) as f64;
-                let mut  value = blend.get([value1, value2]);
+                let mut value = blend.get([value1, value2]);
                 
                 value = (value + 1.0)/2.0;
                 let max_int = map_value(value, 0, *max_height);
@@ -64,6 +80,13 @@ impl Chunk{
                     max = (max_int * -1) as usize;
                 }else{
                     max = max_int as usize
+                }
+
+                let has_plant;
+                if rng.gen_range(1..100) == 1 {
+                    has_plant = true;
+                }else{
+                    has_plant = false;
                 }
 
                 for j in 0..*max_height{//{
@@ -78,32 +101,8 @@ impl Chunk{
                     //     number = 2;
                     // }
 
-                    //ACTUAL TERRAIn
-                    if j > max {
-                        if j < WATER_LEVEL{
-                            number = 3;
-                        }else{
-                            number = 240;
-                        }
-                        
-                    }else{
-                        
-                        if j <= 7 {
-                            number = 1;
-                        }else if j == max {
-                            if j > WATER_LEVEL + 2{
-                                number = 0;
-                            }else{
-                                number = 6;
-                            }
-                        }else if j >= 8  {
-                            number = 2;
-                        }  else {
-                            number = 240;
-                        }
-                    }
+                    number = get_block_type(j, max, WATER_LEVEL, has_plant);
                     
-
                     blocks[i][k].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
                     y_pos += 1.0;
                 }
@@ -140,7 +139,9 @@ impl Chunk{
             transparent_opacity: vec![],
             transparent_vao: 0,
             transparent_vbos: (0,0,0,0),
-            transparent_chunk_model: (0,0,0)
+            transparent_chunk_model: (0,0,0),
+
+            world_gen_seed: *world_gen_seed
         };
     }
 
@@ -156,15 +157,18 @@ impl Chunk{
         let x_pos_temp = position.x;
         let y_pos_temp = position.y;
 
-        let perlin = Perlin::default();
-        let ridged = RidgedMulti::new();
-        let fbm = Fbm::new();
+        let perlin = Perlin::new().set_seed(self.world_gen_seed);
+        let ridged = RidgedMulti::new().set_seed(self.world_gen_seed);
+        let fbm = Fbm::new().set_seed(self.world_gen_seed);
         let blend = Blend::new(&perlin, &ridged, &fbm);
 
         let max_height = self.blocks[0][0].len();
 
+        let mut rng = StdRng::seed_from_u64(self.world_gen_seed as u64);
+
         for i in 0..self.blocks.len(){  //Z line Go from positive to negative
             for k in 0..self.blocks[i].len() { //X line go from positive to negative
+
 
                 let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.0190) as f64;
                 let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* 0.0190) as f64;
@@ -177,6 +181,13 @@ impl Chunk{
                     max = (max_int * -1) as usize;
                 }else{
                     max = max_int as usize
+                }
+
+                let has_plant;
+                if rng.gen_range(1..100) == 1 {
+                    has_plant = true;
+                }else{
+                    has_plant = false;
                 }
 
                 for j in 0..max_height{
@@ -192,30 +203,8 @@ impl Chunk{
                     //     number = 2;
                     // }
 
-                    //ACTUAL TERRAIn
-                    if j > max {
-                        if j < WATER_LEVEL{
-                            number = 3;
-                        }else{
-                            number = 240;
-                        }
-                        
-                    }else{
-                        
-                        if j <= 7 {
-                            number = 1;
-                        }else if j == max {
-                            if j > WATER_LEVEL + 2{
-                                number = 0;
-                            }else{
-                                number = 6;
-                            }
-                        }else if j >= 8  {
-                            number = 2;
-                        }  else {
-                            number = 240;
-                        }
-                    }
+                    
+                    number = get_block_type(j, max, WATER_LEVEL, has_plant);
                     
                     self.blocks[i][k][j].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
                     
@@ -399,4 +388,33 @@ impl Chunk{
 
 fn map_value(value: f64, minimum: usize, maximum: usize) -> i32{
     return ((maximum - minimum) as f64 * value).floor() as i32 + minimum as i32;
+}
+
+fn get_block_type(block_height: usize, max_collumn_height: usize, water_level: usize, has_plant: bool) -> usize {
+    let block_id;
+    if has_plant && block_height > water_level && water_level < max_collumn_height && block_height < max_collumn_height + 7 {
+        return 5;
+    }else if block_height > max_collumn_height {
+        if block_height < water_level{
+            block_id = 3; //Water
+        }else{
+            block_id = 240;// AIR
+        }
+    }else{
+        if block_height <= 7 {
+            block_id = 1; // Dirt
+        }else if block_height == max_collumn_height {
+            if block_height > water_level + 2{
+                block_id = 0; //Grass
+            }else{
+                block_id = 6; //Sand
+            }
+        }else if block_height >= 8  {
+            block_id = 2; //Stone
+        }  else {
+            block_id = 240; //AIR
+        }
+    }
+
+    return block_id;
 }

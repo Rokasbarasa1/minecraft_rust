@@ -84,7 +84,7 @@ impl Skybox{
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         }
         
-        let mut skybox = Skybox{
+        let skybox = Skybox{
             program: program,
             texture_id: texture_id,
             skybox_vao: skybox_vao,

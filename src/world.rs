@@ -6,7 +6,6 @@ pub mod chunk;
 pub mod block_model;
 mod Block_model;
 use self::{block_model::BlockModel, chunk::block};
-use core::prelude;
 use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
@@ -115,7 +114,6 @@ impl World{
             }
         }
         
-        //Correction of grid location is done 
         let length: usize = self.chunk_grid.len();
         if change_direction != 0 {
             let mut stopwatch = stopwatch::Stopwatch::new();
@@ -148,7 +146,6 @@ impl World{
                             }
                         },
                         4 =>  {
-                            // println!("Type 4 -Z");
                             if i != self.chunk_grid.len()-1{
                                 if i == 0{
                                     self.chunk_grid.swap(0, length-1);
@@ -177,7 +174,6 @@ impl World{
                     for k in 0..length{
                         match change_direction {
                             1 => {
-                                //println!("Type 1 +X");
                                 if k == 0{
                                     self.chunk_grid[i].swap(length-1, 0);
 
@@ -199,7 +195,6 @@ impl World{
                                 }
                             },
                             3 =>  {
-                                //println!("Type 3 -X");
                                 if k == 0{
                                     self.chunk_grid[i].swap(0, length-1);
 
@@ -405,7 +400,6 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
                             index_j = j; 
                             index_l = l; 
                             index_m = m; 
-                            min = distance;
                             return (index_i,index_k,index_j,index_l,index_m)
                         }
                     }
@@ -459,7 +453,6 @@ fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player:
                             index_j = j; 
                             index_l = l; 
                             index_m = m; 
-                            min = distance;
                             return (index_i,index_k,index_j,index_l,index_m)
                         }
                     }
@@ -511,7 +504,6 @@ fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, us
                         index_j = j; 
                         index_l = l; 
                         index_m = m; 
-                        min = distance;
                         return (index_i,index_k,index_j,index_l,index_m)
                     }
                 }
@@ -532,37 +524,24 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
 }
 
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, WORLD_GEN_SEED: &u32, max_height: &usize){
-    let half_chunk_width = (*square_chunk_width as f32 / 2.0).floor();
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, max_height: &usize){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
-    let mut x_pos = camera_position.x + adjustment;//+ (half_chunk_width + (*render_out_from_player as f32 * *square_chunk_width as f32));
-    let mut z_pos = camera_position.z + adjustment;//+ (half_chunk_width + (*render_out_from_player as f32 * *square_chunk_width as f32));
+    let mut x_pos = camera_position.x + adjustment;
+    let mut z_pos = camera_position.z + adjustment;
     let x_pos_temp = z_pos;
 
-    let mut chunk_width: usize = 0;
+    let chunk_width;
     if render_out_from_player % 2 == 0 {
         chunk_width = render_out_from_player + 1;
     }else {
         chunk_width = *render_out_from_player;
     }
 
-
-    // let mut width_adjust= 0;
-    // if square_chunk_width % 2 == 1 {
-    //     width_adjust = 1;
-    // }
-
-    // let chunk_widht;
-    // if *render_out_from_player == 1 {
-    //     chunk_widht = 1;
-    // }else{
-    //     chunk_widht = *render_out_from_player * 2 - width_adjust
-    // };
     for i in 0..chunk_width{  //Z line Go from positive to negative
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_width{  //X line Go from positive to negative
-            chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, WORLD_GEN_SEED, max_height));
+            chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, max_height));
             x_pos -= *square_chunk_width as f32;
         }
         x_pos = x_pos_temp;
@@ -887,7 +866,6 @@ fn build_mesh_single(world: &mut World, i: usize, k: usize){
     let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
     Chunk::set_transparent_chunk_model(&mut world.chunk_grid[i][k], texture_transparent_model);
 }
-
 
 // Open gl stuff
 fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){

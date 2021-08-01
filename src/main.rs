@@ -21,7 +21,7 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 1080;
     const VIEW_DISTANCE: f32 = 200.0;
     const WORLD_GEN_SEED: u32 = 60;
-    const MAX_HEIGHT: usize = 15;
+    const MAX_HEIGHT: usize = 26;
     const PLAYER_HEIGHT: f32 = 1.5;
     // const PLAYER_MOVE_SPEED: f32 = 50.0; // Per second
 
@@ -67,7 +67,7 @@ fn main() {
 
     
     let mut time_increment: f32 = 0.0;
-    let mut camera_pos = glm::vec3(0.0, 0.0, 0.0);
+    let camera_pos = glm::vec3(0.0, 0.0, 0.0);
     let mut world: world::World = world::World::new(
         &camera_pos, 
         &SQUARE_CHUNK_WIDTH, 
@@ -77,14 +77,17 @@ fn main() {
         &WORLD_GEN_SEED,
         &MAX_HEIGHT
     );
-    let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos.clone());
+    let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos);
 
     
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
 
+    const TIME_BETWEEN_FRAMES: u64 = 20;
     let mut event_pump = sdl.event_pump().unwrap();
+    let mut stopwatch = stopwatch::Stopwatch::new();
     'main: loop {
-
+        stopwatch.reset();
+        stopwatch.start();
         let close_game: bool = player.handle_events(&mut world, &mut event_pump);
         
         if close_game {
@@ -157,6 +160,12 @@ fn main() {
             // }
         }
         
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        // stopwatch::Stopwatch::stop(&mut stopwatch);
+        // stopwatch::Stopwatch::reset(&mut stopwatch);
+
+
+        if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
+            std::thread::sleep(std::time::Duration::from_millis(TIME_BETWEEN_FRAMES - stopwatch.elapsed_ms() as u64));
+        }
     }
 }
