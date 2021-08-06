@@ -9,6 +9,8 @@ use self::{block_model::BlockModel, chunk::block};
 use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
+use std::collections::HashMap;
+
 pub struct World {
     pub chunk_width: usize,
     pub loaded_textures: gl::types::GLuint,
@@ -17,12 +19,12 @@ pub struct World {
     pub view_distance: f32,
     pub program: render_gl::Program,
     pub unbuilt_models: Vec<(usize, usize, bool)>,
+    pub set_blocks: HashMap<String, usize>,
     pub index: usize
 }
 
 impl World{
-    pub fn new(camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, program: &render_gl::Program,  chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, max_height: &usize) -> World{
-        
+    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, mid_height: &usize, underground_height: &usize, sky_height: &usize, noise_resolution: &f32) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
             loaded_textures: 0,
@@ -31,6 +33,7 @@ impl World{
             view_distance: (square_chunk_width.clone() as f32 * chunks_layers_from_player.clone() as f32) - *chunks_layers_from_player as f32,
             program: program.clone(),
             unbuilt_models: vec![],
+            set_blocks: HashMap::new(),
             index: 0
         };
 
@@ -38,7 +41,7 @@ impl World{
         setup_texture(&mut world);
         
         //LOAD TERRAIN
-        generate_chunks(&mut world.chunk_grid, camera_position, square_chunk_width, chunks_layers_from_player, world_gen_seed, max_height);
+        generate_chunks(&mut world.chunk_grid, camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height, noise_resolution);
 
         //CHECK VISIBILITY 
         check_visibility(&mut world);
@@ -123,7 +126,7 @@ impl World{
                 if change_direction == 2 || change_direction == 4{
                     match change_direction {
                         2 => {
-                            // println!("Type 2 +Z");
+                            // -X
                             if i != self.chunk_grid.len()-1{
                                 if i == 0{
                                     self.chunk_grid.swap(length-1, 0);
@@ -132,9 +135,9 @@ impl World{
                                         let mut new_position = self.chunk_grid[length-1][k].get_position().clone();
                                         let mut grid = self.chunk_grid[length-1][k].get_grid().clone();
                                         new_position.z += self.chunk_width as f32;
-                                        grid.0 += 1;
+                                        grid.0 -= 1;
                                         
-                                        self.chunk_grid[0][k].regenerate(grid.0, grid.1, new_position, &self.chunk_width);
+                                        self.chunk_grid[0][k].regenerate(grid.0, grid.1, new_position, &self.chunk_width, &mut self.set_blocks);
                                         
                                         self.unbuilt_models.push((0,k,true));
                                         self.unbuilt_models.push((1,k,true));
@@ -145,7 +148,7 @@ impl World{
                                 }
                             }
                         },
-                        4 =>  {
+                        4 =>  { //+X
                             if i != self.chunk_grid.len()-1{
                                 if i == 0{
                                     self.chunk_grid.swap(0, length-1);
@@ -154,9 +157,9 @@ impl World{
                                         let mut new_position = self.chunk_grid[0][k].get_position().clone();
                                         let mut grid = self.chunk_grid[0][k].get_grid().clone();
                                         new_position.z -= self.chunk_width as f32;
-                                        grid.0 -= 1;
+                                        grid.0 += 1;
 
-                                        self.chunk_grid[length-1][k].regenerate(grid.0, grid.1, new_position, &self.chunk_width);
+                                        self.chunk_grid[length-1][k].regenerate(grid.0, grid.1, new_position, &self.chunk_width, &mut self.set_blocks);
                                         
                                         self.unbuilt_models.push((length-1,k,true));
                                         self.unbuilt_models.push((length-2,k,true));
@@ -173,16 +176,16 @@ impl World{
                 }else{
                     for k in 0..length{
                         match change_direction {
-                            1 => {
+                            1 => { //-Z
                                 if k == 0{
                                     self.chunk_grid[i].swap(length-1, 0);
 
                                     let mut new_position = self.chunk_grid[i][length-1].get_position().clone();
                                     let mut grid = self.chunk_grid[i][length-1].get_grid().clone();
                                     new_position.x += self.chunk_width as f32;
-                                    grid.1 += 1;
+                                    grid.1 -= 1;
 
-                                    self.chunk_grid[i][0].regenerate(grid.0, grid.1, new_position, &self.chunk_width);
+                                    self.chunk_grid[i][0].regenerate(grid.0, grid.1, new_position, &self.chunk_width, &mut self.set_blocks);
                                         
                                     self.unbuilt_models.push((i,0,true));
                                     self.unbuilt_models.push((i,1,true));
@@ -194,16 +197,16 @@ impl World{
                                     }
                                 }
                             },
-                            3 =>  {
+                            3 =>  { // +Z
                                 if k == 0{
                                     self.chunk_grid[i].swap(0, length-1);
 
                                     let mut new_position = self.chunk_grid[i][0].get_position().clone();
                                     let mut grid = self.chunk_grid[i][0].get_grid().clone();
                                     new_position.x -= self.chunk_width as f32;
-                                    grid.1 -= 1; 
+                                    grid.1 += 1; 
 
-                                    self.chunk_grid[i][length-1].regenerate(grid.0, grid.1, new_position, &self.chunk_width);
+                                    self.chunk_grid[i][length-1].regenerate(grid.0, grid.1, new_position, &self.chunk_width, &mut self.set_blocks);
                                         
                                     self.unbuilt_models.push((i,length-1,true));
                                     self.unbuilt_models.push((i,length-2,true));
@@ -229,7 +232,13 @@ impl World{
         while glm::distance(position.clone(), end.clone()) < 6.0 {
             let block_index = get_block(&self, &end);
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
+                
+                //Setting block in saved blocks
+                let grid = self.chunk_grid[block_index.0][block_index.1].get_grid();
+                check_and_set_block(&mut self.set_blocks, grid.0, grid.1, block_index.2, block_index.3, block_index.4, 240);
+                
                 let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[block_index.0][block_index.1])[block_index.2][block_index.3][block_index.4];
+                
                 block::Block::set_block_id(&mut block, 240); //240 is air
                 block::Block::set_invisiblie(&mut block);
                 check_blocks_around_block(self, block_index.0, block_index.1, block_index.2, block_index.3, block_index.4);
@@ -256,6 +265,10 @@ impl World{
                     if is_player_in_block_location(self, camera_pos, player_height, last_air_block_index.0, last_air_block_index.1, last_air_block_index.2, last_air_block_index.3, last_air_block_index.4){
                         break;
                     }
+
+                    //Setting block in saved blocks
+                    let grid = self.chunk_grid[last_air_block_index.0][last_air_block_index.1].get_grid();
+                    check_and_set_block(&mut self.set_blocks, grid.0, grid.1, block_index.2, block_index.3, block_index.4, selected_block);
 
                     let mut block = &mut Chunk::get_blocks_vector_mutable(&mut self.chunk_grid[last_air_block_index.0][last_air_block_index.1])[last_air_block_index.2][last_air_block_index.3][last_air_block_index.4];
                     Block::set_visible(&mut block);
@@ -342,6 +355,16 @@ impl World{
                 self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y-1.0, camera_pos.z), 1 as usize)
             }
         }
+    }
+}
+
+fn check_and_set_block(set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: usize){
+    let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");
+    if set_blocks.contains_key(&key) {
+        set_blocks.remove_entry(&key);
+        set_blocks.insert(key, id);
+    }else{
+        set_blocks.insert(key, id);
     }
 }
 
@@ -524,7 +547,7 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
 }
 
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, max_height: &usize){
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &usize, set_blocks: &mut HashMap<String, usize>, underground_height: &usize, sky_height: &usize, noise_resolution: &f32){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
     let mut x_pos = camera_position.x + adjustment;
     let mut z_pos = camera_position.z + adjustment;
@@ -541,7 +564,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vect
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_width{  //X line Go from positive to negative
-            chunk_grid[i].push(chunk::Chunk::init(i.clone() as i32, k.clone() as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, max_height));
+            chunk_grid[i].push(chunk::Chunk::init(i as i32, k as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, noise_resolution));
             x_pos -= *square_chunk_width as f32;
         }
         x_pos = x_pos_temp;
