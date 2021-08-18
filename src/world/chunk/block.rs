@@ -12,13 +12,13 @@ pub enum BlockId{
 
 pub struct Block {
     pub position: glm::Vector3<f32>,
-    pub id: usize,
+    pub id: u8,
     pub visible: bool,
     pub sides: Vec<bool>
 }
 
 impl Block {
-    pub fn init(position: glm::Vector3<f32>, id: usize) -> Block{
+    pub fn init(position: glm::Vector3<f32>, id: u8) -> Block{
         return Block{
             position,
             id,
@@ -27,7 +27,7 @@ impl Block {
         };
     }
 
-    pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: usize){
+    pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: u8){
         self.position = position;
         self.id = id;
         self.sides = vec![];
@@ -56,7 +56,7 @@ impl Block {
                                             BlockModel::get_px(block_model, self.id)[n].y + self.position.y, 
                                             BlockModel::get_px(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_px_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -71,7 +71,7 @@ impl Block {
                                             BlockModel::get_nx(block_model, self.id)[n].y + self.position.y, 
                                             BlockModel::get_nx(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_nx_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -86,7 +86,7 @@ impl Block {
                                             BlockModel::get_py(block_model, self.id)[n].y + self.position.y, 
                                             BlockModel::get_py(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_py_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -101,7 +101,7 @@ impl Block {
                                             BlockModel::get_ny(block_model, self.id)[n].y + self.position.y, 
                                             BlockModel::get_ny(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_ny_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -116,7 +116,7 @@ impl Block {
                                             BlockModel::get_pz(block_model, self.id)[n].y + self.position.y, 
                                             BlockModel::get_pz(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_pz_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -131,7 +131,7 @@ impl Block {
                                             BlockModel::get_nz(block_model, self.id)[n].y + self.position.y - ((self.id == 3) as i32 as f32 * 0.1), 
                                             BlockModel::get_nz(block_model, self.id)[n].z + self.position.z
                                         ),
-                                        BlockModel::get_nz_uv(block_model)[(self.id * 6) + n],
+                                        BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.id == 3{0.8}else{1.0},
                                         Block::is_transparent(&self)
@@ -161,7 +161,7 @@ impl Block {
         return &self.position;
     }
 
-    pub fn set_block_id(&mut self, new_id: usize){
+    pub fn set_block_id(&mut self, new_id: u8){
         self.id = new_id;
     }
 
@@ -169,7 +169,7 @@ impl Block {
         self.visible = true;
     }
 
-    pub fn get_id(&self) -> usize {
+    pub fn get_id(&self) -> u8 {
         self.id
     }
 

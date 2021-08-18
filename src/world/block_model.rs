@@ -586,7 +586,7 @@ impl BlockModel {
         }
     }
     
-    pub fn get_px(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_px(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.px_pos_water
         }else{
@@ -594,7 +594,7 @@ impl BlockModel {
         }
     }
 
-    pub fn get_nx(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_nx(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.nx_pos_water
         }else{
@@ -602,7 +602,7 @@ impl BlockModel {
         }
     }
 
-    pub fn get_py(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_py(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.py_pos_water
         }else{
@@ -610,7 +610,7 @@ impl BlockModel {
         }
     }
 
-    pub fn get_ny(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_ny(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.ny_pos_water
         }else{
@@ -618,7 +618,7 @@ impl BlockModel {
         }
     }
 
-    pub fn get_pz(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_pz(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.pz_pos_water
         }else{
@@ -626,7 +626,7 @@ impl BlockModel {
         }
     }
 
-    pub fn get_nz(&self, id: usize) -> &Vec<glm::Vec3>{
+    pub fn get_nz(&self, id: u8) -> &Vec<glm::Vec3>{
         if id == 3{
             &self.nz_pos_water
         }else{

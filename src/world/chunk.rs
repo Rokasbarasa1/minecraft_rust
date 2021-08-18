@@ -1,13 +1,12 @@
 extern crate noise;
-use glm::Vec3;
 use glm::ext::powi;
 use rand::Rng;
 use rand::rngs::StdRng;
 use rand::{SeedableRng};
-use noise::{Blend, Fbm, NoiseFn, Perlin, RidgedMulti, Seedable, Billow, BasicMulti, Worley, Value, SuperSimplex, OpenSimplex, HybridMulti};
+use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
 use super::{block_model::BlockModel};
 use std::collections::HashMap;
-
+extern crate stopwatch;
 pub mod block;
 
 pub struct Chunk {
@@ -34,18 +33,15 @@ pub struct Chunk {
     pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 
     pub world_gen_seed: u32,
-    pub underground_height: usize,
-    pub sky_height: usize,
-    pub mid_height: usize,
+    pub underground_height: u8,
+    pub sky_height: u8,
+    pub mid_height: u8,
     pub noise_resolution: f32
 }
 
 impl Chunk{
-    pub fn init(grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &usize, set_blocks: &mut HashMap<String, usize>, underground_height: &usize, sky_height: &usize, noise_resolution: &f32) -> Chunk{
+    pub fn init(grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, noise_resolution: &f32) -> Chunk{
         let mut blocks: Vec<Vec<Vec<block::Block>>> = vec![];
-
-        let underground_height: usize = 0;
-        let sky_height: usize = 15;
 
         // Perlin smooth rolling hills
         // Ridged is just random hills. Maybe good to add at a very low frequency to make interesting terrain
@@ -58,7 +54,7 @@ impl Chunk{
         // Open simplex is very very flat and low heigh variaton
         // Hybrd multi is very extreme. Maybe not use this one
 
-        let end_pos = generate_chunk(&mut blocks, *square_chunk_width, position, grid_x, grid_z, *world_gen_seed, *mid_height, underground_height, sky_height, false, set_blocks, *noise_resolution);
+        let end_pos = generate_chunk(&mut blocks, *square_chunk_width, position, grid_x, grid_z, *world_gen_seed, *mid_height, *underground_height, *sky_height, false, set_blocks, *noise_resolution);
         let position_of_chunk = glm::vec3((position.x + end_pos.x) / 2.0, (position.y + end_pos.y) / 2.0, (position.z + end_pos.z) / 2.0);
         
         return Chunk{
@@ -85,23 +81,20 @@ impl Chunk{
             transparent_chunk_model: (0,0,0),
 
             world_gen_seed: *world_gen_seed,
-            underground_height: underground_height,
-            sky_height: sky_height,
+            underground_height: *underground_height,
+            sky_height: *sky_height,
             mid_height: *mid_height,
             noise_resolution: *noise_resolution
         };
     }
 
-    pub fn regenerate(&mut self, grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, set_blocks: &mut HashMap<String, usize>){
+    pub fn regenerate(&mut self, grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, set_blocks: &mut HashMap<String, u8>){
         let half_chunk_width = *square_chunk_width as f32 / 2.0;
         let center_position = position;
 
         let position = glm::vec3(position.x + half_chunk_width - 0.5 , position.y, position.z + half_chunk_width - 0.5);
-        
-        let underground_height: usize = 0;
-        let sky_height: usize = 15;
 
-        generate_chunk(&mut self.blocks, *square_chunk_width, position, grid_x, grid_z, self.world_gen_seed, self.mid_height, underground_height, sky_height, true, set_blocks, self.noise_resolution);
+        generate_chunk(&mut self.blocks, *square_chunk_width, position, grid_x, grid_z, self.world_gen_seed, self.mid_height, self.underground_height, self.sky_height, true, set_blocks, self.noise_resolution);
 
         self.grid_x = grid_x;
         self.grid_z = grid_z;
@@ -272,32 +265,39 @@ impl Chunk{
     }
 }
 
-fn map_value(value: f64, minimum: usize, maximum: usize) -> i32{
+fn map_value(value: f64, minimum: u8, maximum: u8) -> i32{
     return ((maximum - minimum) as f64 * value).floor() as i32 + minimum as i32;
 }
 
-fn generate_chunk(blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: glm::Vec3, grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: usize, underground_height: usize, sky_height: usize, overwrite: bool, set_blocks: &mut HashMap<String, usize>, resolution: f32) -> glm::Vec3{
+fn generate_chunk(blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: glm::Vec3, grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: u8, underground_height: u8, sky_height: u8, overwrite: bool, set_blocks: &mut HashMap<String, u8>, resolution: f32) -> glm::Vec3{
+    let mut stopwatch = stopwatch::Stopwatch::new();
+    stopwatch.start();
     let mut x_pos = position.x;
     let mut z_pos = position.z;
     let mut y_pos = position.y;
     let x_pos_temp = position.x;
     let y_pos_temp = position.y;
 
-    let mut basic_multi = BasicMulti::default().set_seed(world_gen_seed);
-    let mut ridged = RidgedMulti::new().set_seed(world_gen_seed);
-    let value = Value::new().set_seed(world_gen_seed);
-    ridged.attenuation = 7.0;
-    ridged.persistence = 2.0;
+    let mut basic_multi = BasicMulti::default().set_seed(60);
+    basic_multi.frequency = 0.1;
+
+    let mut ridged = RidgedMulti::new().set_seed(60);
+    let mut fbm = Fbm::new().set_seed(60);
+    // fbm.persistence = 1.0;
+    fbm.frequency = 0.01;
+    ridged.attenuation = 7.07;
+    ridged.persistence = 2.02;
     ridged.octaves = 3;
-    ridged.frequency = 1.0 as f64;
-    basic_multi.frequency = 3.0 as f64;
+    ridged.frequency = 7.01 as f64;
+    basic_multi.frequency = 0.000004 as f64;
     basic_multi.octaves = 3;
     
     let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
 
-    let blend = Blend::new(&value, &ridged, &basic_multi);
+    let blend = Blend::new(&fbm, &ridged, &basic_multi);
+    // blend.control // Negative value for more value 1 positive for more value 2
     let mut rng = StdRng::seed_from_u64(world_gen_seed as u64 + powi(grid_x as f64, 2).sqrt() as u64 + powi(grid_z as f64, 2).sqrt() as u64);    
-    let water_level: usize = 11 + underground_height;
+    let water_level: u8 = 11 + underground_height;
 
     for i in 0..square_chunk_width{
         if !overwrite {
@@ -311,34 +311,35 @@ fn generate_chunk(blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: 
                 blocks[i].push(row);
             }
             
-            let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* resolution) as f64;
-            let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* resolution) as f64;
+            let value1: f64 = (z_pos + grid_z as f32) as f64;
+            let value2: f64 = (x_pos + grid_x as f32) as f64;
             let mut value = blend.get([value1, value2]);
-            
+            if value > 1.0 || value < -1.0{
+                println!("ValueNoise {} value1: {} value1: {}", value, value1, value2);
+            }
             value = (value + 1.0)/2.0;
             let max_int = map_value(value, 0, mid_height);
-            let max: usize;
+            let max: u8;
             if max_int < 0 {
-                max = (max_int * -1) as usize + underground_height;
+                max = (max_int * -1) as u8 + underground_height;
             }else{
-                max = max_int as usize + underground_height;
+                max = max_int as u8 + underground_height;
             }
 
             let has_plant;
             if rng.gen_range(1..500) == 1 {
                 has_plant = true;
                 if max> water_level{
-                    trees.push((grid_x, grid_z, i, k, max + underground_height+6));
+                    trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
                 }
             }else{
                 has_plant = false;
             }
 
-            for j in 0..mid_height + underground_height + sky_height{
-                let mut number: usize;
+            for j in 0..(mid_height + underground_height + sky_height) as usize{
+                let mut number: u8;
 
                 // CHUNK TESTING BLOCK BREAKING
-                // let square_chunk_width = self.blocks.len();
                 // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
                 //     number = 0;
                 // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
@@ -349,13 +350,13 @@ fn generate_chunk(blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: 
                 
                 number = get_set_block(set_blocks, grid_x, grid_z, i, k, j);
                 if number == 241{
-                    number = get_block_type(j, underground_height+max, water_level, has_plant, underground_height, sky_height, mid_height + underground_height + sky_height);
+                    number = get_block_type(j as u8, underground_height+max, water_level, has_plant, underground_height, sky_height, mid_height + underground_height + sky_height);
                 }
                 
                 if !overwrite{
-                    blocks[i][k].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
+                    blocks[i as usize][k as usize].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
                 }else{
-                    blocks[i][k][j].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
+                    blocks[i as usize][k as usize][j as usize].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
                 }
                 y_pos += 1.0;
             }
@@ -369,11 +370,13 @@ fn generate_chunk(blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: 
     for i in 0..trees.len(){
         set_tree(blocks, set_blocks, trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4);
     }
+    stopwatch.stop();
+    println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
 
     return block::Block::get_position(&blocks[blocks.len()-1][blocks[blocks.len()-1].len()-1][0]).clone();
 }
 
-fn get_block_type(block_height: usize, max_collumn_height: usize, water_level: usize, has_plant: bool, underground_height: usize, sky_height: usize, height_limit: usize) -> usize {
+fn get_block_type(block_height: u8, max_collumn_height: u8, water_level: u8, has_plant: bool, underground_height: u8, sky_height: u8, height_limit: u8) -> u8 {
     
     if block_height < underground_height {
         return 2;
@@ -411,7 +414,7 @@ fn get_block_type(block_height: usize, max_collumn_height: usize, water_level: u
 
 }
 
-fn get_set_block(set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize) -> usize{
+fn get_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize) -> u8{
     let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");
 
     match set_blocks.get(&key){
@@ -420,7 +423,7 @@ fn get_set_block(set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i
     }
 }
 
-fn set_tree(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize){
+fn set_tree(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize){
     // UP is +X
     // Left is +Z
     // Right is -Z
@@ -512,8 +515,8 @@ fn set_tree(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<S
     set_tree_block(blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -2,   j-2);
 }
 
-fn set_tree_block(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i32, i: isize, k: isize, j: usize){
-    if i < 0 || k < 0 || i >= blocks[0].len() as isize || k >= blocks[0].len() as isize{
+fn set_tree_block(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: isize, k: isize, j: usize){
+    if i < 0 || k < 0 || i > (blocks[0].len() - 1) as isize || k > (blocks[0].len() - 1) as isize || j > (blocks[0][0].len() - 1){
         let mut grid_x_set = grid_x;
         let mut grid_z_set = grid_z;
         let mut i_set = i;
@@ -521,31 +524,31 @@ fn set_tree_block(blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut Has
         
         if i < 0 {
             i_set = blocks[0].len() as isize;
-            grid_x_set = grid_x_set - 1;
+            grid_x_set = grid_x_set - i as i32;
         }
 
         if k < 0 {
             k_set = blocks[0].len() as isize;
-            grid_z_set = grid_z_set - 1;
+            grid_z_set = grid_z_set - k as i32;
         }
 
         if i >= blocks[0].len() as isize {
             i_set = 0;
-            grid_x_set = grid_x_set + 1;
+            grid_x_set = grid_x_set + (i as usize - (blocks[0].len() - 1)) as i32;
 
         }
 
         if k >= blocks[0].len() as isize {
             k_set = 0;
-            grid_z_set = grid_z_set + 1;
+            grid_z_set = grid_z_set + (k as usize - (blocks[0].len() - 1)) as i32;
         }
-
         
         let key = [grid_x_set.to_string(), grid_z_set.to_string(), i_set.to_string(), k_set.to_string(), j.to_string()].join("");
 
         if !set_blocks.contains_key(&key){
             set_blocks.insert(key, 7);
         }
+
     }else{
         blocks[i as usize][k as usize][j].id = 7;
     }

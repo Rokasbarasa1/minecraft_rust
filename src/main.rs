@@ -8,6 +8,10 @@ pub mod world;
 pub mod player;
 pub mod skybox; 
 use std::ffi::CString;
+use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
+
+use std::fs::File;
+use std::io::{Write};
 
 //$Env:RUST_BACKTRACE=1
 fn main() {
@@ -16,20 +20,16 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 1080;
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 7;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 17;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
-    const MID_HEIGHT: usize = 30;                   //The terrain variation part
-    const SKY_HEIGHT: usize = 10;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
-    const UNDERGROUND_HEIGHT: usize = 0;            
+    const MID_HEIGHT: u8 = 30;                   //The terrain variation part
+    const SKY_HEIGHT: u8 = 0;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
+    const UNDERGROUND_HEIGHT: u8 = 0;            
     const NOISE_RESOLUTION: f32 = 0.019;            //Zoom in - more resolution. Higher - Zoom out
 
-
-
-    // let noise = Perlin::new();
-    // noise.set_seed(WORLD_GEN_SEED);
 
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
@@ -67,7 +67,45 @@ fn main() {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
 
+
+    let mut basic_multi = BasicMulti::default().set_seed(60);
+    basic_multi.frequency = 0.1;
+
+    let mut ridged = RidgedMulti::new().set_seed(60);
+    let mut fbm = Fbm::new().set_seed(60);
+    fbm.persistence = 1.0;
+    fbm.frequency = 0.01;
+    ridged.attenuation = 7.07;
+    ridged.persistence = 2.02;
+    ridged.octaves = 3;
+    ridged.frequency = 7.01 as f64;
+    basic_multi.frequency = 0.000004 as f64;
+    basic_multi.octaves = 3;
     
+    let blend = Blend::new(&fbm, &ridged, &basic_multi);
+    let mut float1:f64 = -1.0;
+    let mut float2:f64 = 1.0;
+    let mut w = File::create("C:/Users/Rokas/Desktop/rust_minecraft/minecraft_rust/test2.txt").unwrap();
+
+    for i in 0..1000{
+        let value1: f64 = float2 as f64;
+        let value2: f64 = float1 as f64;
+        let value = blend.get([value1, value2]);
+        writeln!(&mut w, "Value1: {} value2: {} blend: {}", value1, value2, value).unwrap();
+        float1 = float1 - 1.0;
+        float2 = float2 + 1.0;
+    }
+    println!("FINISHED");
+
+    // let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.200) as f64;
+    // let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* 0.200) as f64;
+    // let mut value = blend.get([value1, value2]);
+    // if value > 1.0 || value < -1.0{
+    //     println!("ValueNoise {} value1: {} value1: {}", value, value1, value2);
+    // }
+
+
+
     let mut time_increment: f32 = 0.0;
     let camera_pos = glm::vec3(0.0, 0.0, 0.0);
     let mut world: world::World = world::World::new(

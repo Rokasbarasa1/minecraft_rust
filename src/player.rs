@@ -32,7 +32,7 @@ pub struct Player {
     pub touched_ground: bool,
 
     pub keyboard_ctrl: bool,
-    pub selected_block: usize,
+    pub selected_block: u8,
 
     pub acceleration_result: f32,
     pub acceleration: f32, // More like bonus speed after adding acceleration
@@ -412,7 +412,6 @@ impl Player{
             }
         }
 
-        // println!("{}", self.in_liquid);
         return close_game;
     }
 }

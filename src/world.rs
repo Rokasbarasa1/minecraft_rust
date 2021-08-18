@@ -4,7 +4,6 @@ extern crate stopwatch;
 use crate::render_gl;
 pub mod chunk;
 pub mod block_model;
-mod Block_model;
 use self::{block_model::BlockModel, chunk::block};
 use std::{ffi::c_void, u32};
 use block::Block;
@@ -19,34 +18,32 @@ pub struct World {
     pub view_distance: f32,
     pub program: render_gl::Program,
     pub unbuilt_models: Vec<(usize, usize, bool)>,
-    pub set_blocks: HashMap<String, usize>,
-    pub index: usize
+    pub set_blocks: HashMap<String, u8>
 }
 
 impl World{
-    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, mid_height: &usize, underground_height: &usize, sky_height: &usize, noise_resolution: &f32) -> World{
+    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8, noise_resolution: &f32) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
             loaded_textures: 0,
             chunk_grid: vec![],
             block_model: block_model::BlockModel::init(),
-            view_distance: (square_chunk_width.clone() as f32 * chunks_layers_from_player.clone() as f32) - *chunks_layers_from_player as f32,
+            view_distance: ((chunks_layers_from_player - 1) / 2 * square_chunk_width + square_chunk_width) as f32, //+  (square_chunk_width.clone() as f32 * chunks_layers_from_player.clone() as f32) - *chunks_layers_from_player as f32,
             program: program.clone(),
             unbuilt_models: vec![],
-            set_blocks: HashMap::new(),
-            index: 0
+            set_blocks: HashMap::new()
         };
 
         //LOAD TEXTURES
         setup_texture(&mut world);
         
-        //LOAD TERRAIN
+        //LOAD CHUNKS AROUND PLAYER
         generate_chunks(&mut world.chunk_grid, camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height, noise_resolution);
 
-        //CHECK VISIBILITY 
+        //CHECK CHUNK VISIBILITY 
         check_visibility(&mut world);
 
-        //BUILD MESH 
+        //BUILD CHUNK MESH 
         build_mesh(&mut world);
 
         return world;
@@ -54,6 +51,7 @@ impl World{
 
     pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>){
         if self.unbuilt_models.len() != 0 {
+                //Move regeneration of chunks to here if possible
                 if self.unbuilt_models[0].2{
                     check_chunk_visibility(self, self.unbuilt_models[0].0, self.unbuilt_models[0].1);
                 }
@@ -86,7 +84,7 @@ impl World{
                     gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
                     gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
                 }
-                if change_direction == 0 && !distance(self.view_distance/2.0 + 8.0, &camera_pos, Chunk::get_position(&self.chunk_grid[i][k])){
+                if change_direction == 0 && !distance(self.view_distance, &camera_pos, Chunk::get_position(&self.chunk_grid[i][k])){
                     change_direction = get_direction(&camera_pos, Chunk::get_position(&self.chunk_grid[i][k]));
                 }
             }
@@ -119,8 +117,6 @@ impl World{
         
         let length: usize = self.chunk_grid.len();
         if change_direction != 0 {
-            let mut stopwatch = stopwatch::Stopwatch::new();
-            stopwatch::Stopwatch::start(&mut stopwatch);
 
             for i in 0..length{
                 if change_direction == 2 || change_direction == 4{
@@ -249,7 +245,7 @@ impl World{
         }
     }
 
-    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: usize, player_height: f32 ){
+    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: u8, player_height: f32 ){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
         while glm::distance(position.clone(), end.clone()) < 6.0 {
@@ -358,7 +354,7 @@ impl World{
     }
 }
 
-fn check_and_set_block(set_blocks: &mut HashMap<String, usize>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: usize){
+fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: u8){
     let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");
     if set_blocks.contains_key(&key) {
         set_blocks.remove_entry(&key);
@@ -547,7 +543,7 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
 }
 
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &usize, set_blocks: &mut HashMap<String, usize>, underground_height: &usize, sky_height: &usize, noise_resolution: &f32){
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, noise_resolution: &f32){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
     let mut x_pos = camera_position.x + adjustment;
     let mut z_pos = camera_position.z + adjustment;
@@ -573,7 +569,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, camera_position: &glm::Vect
 }
 
 fn distance(max_distance: f32, point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32>) -> bool{
-    return (f32::powi(point1.x.clone() - point2.x.clone(), 2)).sqrt() < max_distance && (f32::powi(point1.z.clone() - point2.z.clone(), 2)).sqrt() < max_distance
+    return (f32::powi(point1.x.clone() - point2.x.clone(), 2)).sqrt().floor() <= max_distance && (f32::powi(point1.z.clone() - point2.z.clone(), 2)).sqrt().floor() <= max_distance
 }
 
 fn get_direction(point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32>) -> usize{
