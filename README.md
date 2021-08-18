@@ -58,3 +58,15 @@ Added rendering of new chunks when the camera is moving. Had a lot of trouble wi
 ![gif of rendering](https://user-images.githubusercontent.com/50622827/122639582-f07c2000-d0fa-11eb-849e-0de94a93b6a8.gif)
 
 Bug of only being able to break the blocks in a circle around the chunk position has been fixed.
+
+# 30-07-2021
+
+Added more player interaction with the world. The player now can collide whith the visible blocks. Can jump. Water effects the players movement speed and the jump functionality. The player cant place a block on himself.
+
+# 06-08-2021 
+
+Added trees with leaves. Added more interesting terrain that has more diversity in landscape. Added a block hashmap which saves the blocks that were changed by the player, when the chunk is loaded again the blocks are there. Tree leaves are a bit buggy accross chunks, the chunk beside tree has in memory the leaves but it needs to be regenerated to include those leaves. Will fix that next time.
+
+![image](https://user-images.githubusercontent.com/50622827/128577982-37897d50-e816-4024-8b1a-3f00054fe0fb.png)
+
+From here the project will mainly have performance tweaks and bug fixes. Unless some features come to my mind and i have the time to implement them. Thank you for reading.
