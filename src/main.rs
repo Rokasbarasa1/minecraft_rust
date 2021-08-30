@@ -16,11 +16,11 @@ use std::io::{Write};
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
-    const WINDOW_WIDTH: u32 = 1920;
-    const WINDOW_HEIGHT: u32 = 1080;
+    const WINDOW_WIDTH: u32 = 1280;
+    const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 17;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
 
@@ -95,7 +95,7 @@ fn main() {
         float1 = float1 - 1.0;
         float2 = float2 + 1.0;
     }
-    println!("FINISHED");
+    // println!("FINISHED");
 
     // let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.200) as f64;
     // let value2: f64 = ((x_pos - 30.0 + grid_x as f32)* 0.200) as f64;

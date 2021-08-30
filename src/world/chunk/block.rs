@@ -30,13 +30,6 @@ impl Block {
     pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: u8){
         self.position = position;
         self.id = id;
-        self.sides = vec![];
-        self.visible = true;
-    }
-
-    pub fn set_visibility_vector(&mut self, cube_sides: Vec<bool>){
-        self.sides = cube_sides;
-        self.visible = true;
     }
 
     pub fn set_invisiblie(&mut self){
@@ -58,7 +51,7 @@ impl Block {
                                         ),
                                         BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -73,7 +66,7 @@ impl Block {
                                         ),
                                         BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -88,7 +81,7 @@ impl Block {
                                         ),
                                         BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -103,7 +96,7 @@ impl Block {
                                         ),
                                         BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -118,7 +111,7 @@ impl Block {
                                         ),
                                         BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -128,12 +121,12 @@ impl Block {
                                     (
                                         glm::vec3(
                                             BlockModel::get_nz(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_nz(block_model, self.id)[n].y + self.position.y - ((self.id == 3) as i32 as f32 * 0.1), 
+                                            BlockModel::get_nz(block_model, self.id)[n].y + self.position.y - ((self.is_water()) as i32 as f32 * 0.1), 
                                             BlockModel::get_nz(block_model, self.id)[n].z + self.position.z
                                         ),
                                         BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
-                                        if self.id == 3{0.8}else{1.0},
+                                        if self.is_water(){0.8}else{1.0},
                                         Block::is_transparent(&self)
                                     )
                                 )
@@ -153,28 +146,8 @@ impl Block {
         return self.id == 3;
     }
 
-    pub fn is_visible(&self) -> bool{
-        return self.visible;
-    }
-
-    pub fn get_position(&self) -> &glm::Vector3<f32>{
-        return &self.position;
-    }
-
-    pub fn set_block_id(&mut self, new_id: u8){
-        self.id = new_id;
-    }
-
-    pub fn set_visible(&mut self){
-        self.visible = true;
-    }
-
-    pub fn get_id(&self) -> u8 {
-        self.id
-    }
-
     fn is_transparent(&self) -> bool {
-        if self.id == 3{
+        if self.is_water(){
             return true;
         }else{
             return false;

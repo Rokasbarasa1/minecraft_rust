@@ -548,11 +548,11 @@ impl BlockModel {
 
         let brightness: Vec<f32> = vec![
             //Back
-            0.70,
+            0.65,
             //Front
-            0.86,
+            0.85,
             //Left
-            0.75,
+            0.70,
             //Right
             0.80,
             //Bottom
