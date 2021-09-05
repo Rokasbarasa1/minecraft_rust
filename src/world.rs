@@ -57,11 +57,19 @@ impl World{
 
 
         if self.unbuilt_models.len() != 0 {
-            //This refresh breaks because the old chunks are replaced by new
 
-            if self.unbuilt_models.len() > 1 && self.unbuilt_models[0].3 && !self.unbuilt_models[0].4{
+            if self.unbuilt_models[0].3 && !self.unbuilt_models[0].4{
                 self.chunk_grid[self.unbuilt_models[0].0][self.unbuilt_models[0].1].regenerate(&mut self.change_block, self.unbuilt_models[0].0, self.unbuilt_models[0].1, &mut self.set_blocks);
                 self.unbuilt_models[0].4 = true;
+            }
+
+            for i in 0..self.unbuilt_models.len(){
+
+                if self.unbuilt_models[i].3 && !self.unbuilt_models[i].4{
+                    self.chunk_grid[self.unbuilt_models[i].0][self.unbuilt_models[i].1].regenerate(&mut self.change_block, self.unbuilt_models[i].0, self.unbuilt_models[i].1, &mut self.set_blocks);
+                    self.unbuilt_models[i].4 = true;
+                    break;
+                }
             }
 
             if self.unbuilt_models[0].2{
