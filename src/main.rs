@@ -19,7 +19,7 @@ fn main() {
     const WINDOW_WIDTH: u32 = 1280;
     const WINDOW_HEIGHT: u32 = 720;
     
-    const SQUARE_CHUNK_WIDTH: usize = 10;           //16;
+    const SQUARE_CHUNK_WIDTH: usize = 8;           //16;
     const CHUNKS_LAYERS_FROM_PLAYER: usize = 5;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
