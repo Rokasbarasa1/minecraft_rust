@@ -309,7 +309,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     }
 
     for i in 0..trees.len(){
-        set_tree(change_block, chunk_i, chunk_k, blocks, set_blocks, trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, overwrite, chunk_distance);
+        set_tree(change_block, chunk_i, chunk_k, blocks, set_blocks, trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, chunk_distance, (mid_height + underground_height + sky_height) as usize);
     }
     stopwatch.stop();
     println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
@@ -369,7 +369,7 @@ fn remove_key(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i:
     set_blocks.remove(&key);
 }
 
-fn set_tree(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, overwrite: bool, chunk_distance: usize){
+fn set_tree(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, chunk_distance: usize, j_max: usize){
     // UP is +X
     // Left is +Z
     // Right is -Z
@@ -379,11 +379,11 @@ fn set_tree(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chu
     //      XXX
     //       X     5
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize,   j, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,   j, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,j, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,j, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,j, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize,   j, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,   j, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,j, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,j, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,j, chunk_distance, j_max);
 
     //      XXX
     //     XXXXX
@@ -391,36 +391,36 @@ fn set_tree(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chu
     //     XXXXX
     //      XXX    20
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,      j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +1,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -1,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,      j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +1,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -1,   j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,   j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +1  , j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -1  , j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +1  , j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -1  , j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize,      j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +1,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -1,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize,      j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +1,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -1,   j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize -2,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -2,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -2,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize -2,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -2,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -2,   j-1, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize +2,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +2,   j-1, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +2,   j-1, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize +2,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +2,   j-1, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +2,   j-1, chunk_distance, j_max);
 
     //     XXXXX
     //     XXXXX
@@ -428,91 +428,87 @@ fn set_tree(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chu
     //     XXXXX
     //     XXXXX   20
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,      j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +1  , j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -1  , j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize,      j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize +1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize,   k as isize -1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize   ,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +1  , j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -1  , j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize,      j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -1,   j-2, chunk_distance, j_max);
 
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize,      j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +1,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -1,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize,      j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +1,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -1,   j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize -2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -2,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize -2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize -2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize -2,   j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize +2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +2,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize   ,k as isize +2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -1,k as isize +2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +1,k as isize +2,   j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +2,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize +2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize +2,   j-2, chunk_distance, j_max);
 
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -2,   j-2, overwrite, chunk_distance);
-    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -2,   j-2, overwrite, chunk_distance);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize +2,k as isize -2,   j-2, chunk_distance, j_max);
+    set_tree_block(change_block, chunk_i, chunk_k, blocks, set_blocks, grid_x, grid_z, i as isize -2,k as isize -2,   j-2, chunk_distance, j_max);
 }
 
-fn set_tree_block(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k: usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: isize, k: isize, j: usize, overwrite: bool, chunk_distance: usize){
-    if i < 0 || k < 0 || i > (blocks[0].len() - 1) as isize || k > (blocks[0].len() - 1) as isize || j > (blocks[0][0].len() - 1){
-        let mut chunk_i_mut = chunk_i as i32;
-        let mut chunk_k_mut = chunk_k as i32; 
-        let mut grid_x_set = grid_x;
-        let mut grid_z_set = grid_z;
-        let mut i_set = i;
-        let mut k_set = k;
-        
-        if i < 0 {
-            i_set = blocks[0].len() as isize + i;
-            grid_x_set = grid_x_set - 1;
-            chunk_i_mut = chunk_i_mut - 1;
-        }
-
-        if k < 0 {
-            k_set = blocks[0].len() as isize + k;
-            grid_z_set = grid_z_set - 1;
-            chunk_k_mut = chunk_k_mut - 1;
-        }
-
-        if i > blocks[0].len() as isize - 1{
-            i_set = i - blocks[0].len() as isize;
-            grid_x_set = grid_x_set + 1;
-            chunk_i_mut = chunk_i_mut + 1;
-
-        }
-
-        if k > blocks[0].len() as isize - 1 {
-            k_set = k - blocks[0].len() as isize;
-            grid_z_set = grid_z_set + 1;
-            chunk_k_mut = chunk_k_mut + 1;
-        }
-
-        
-        // If block is outisde the chunk border that is currently rendered add it as set block
-        // If the block is inside the currently rendered chunk border put it in change blocks
-
-        if (chunk_distance as i32 - 1) >= chunk_k_mut && (chunk_distance as i32 - 1) >= chunk_i_mut && 0 <= chunk_k_mut && 0 <= chunk_i_mut{
+fn set_tree_block(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k: usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: isize, k: isize, j: usize, chunk_distance: usize, j_max: usize){
+    if j_max > j{
+        if i < 0 || k < 0 || i > (blocks[0].len() - 1) as isize || k > (blocks[0].len() - 1) as isize || j > (blocks[0][0].len() - 1){
+            let mut chunk_i_mut = chunk_i as i32;
+            let mut chunk_k_mut = chunk_k as i32; 
+            let mut grid_x_set = grid_x;
+            let mut grid_z_set = grid_z;
+            let mut i_set = i;
+            let mut k_set = k;
             
-            change_block.push((chunk_i_mut as usize, chunk_k_mut as usize, i_set as usize, k_set as usize, j, 1))
+            if i < 0 {
+                i_set = blocks[0].len() as isize + i;
+                grid_x_set = grid_x_set - 1;
+                chunk_i_mut = chunk_i_mut - 1;
+            } else if i > blocks[0].len() as isize - 1{
+                i_set = i - blocks[0].len() as isize;
+                grid_x_set = grid_x_set + 1;
+                chunk_i_mut = chunk_i_mut + 1;
+            }
+
+            if k < 0 {
+                k_set = blocks[0].len() as isize + k;
+                grid_z_set = grid_z_set - 1;
+                chunk_k_mut = chunk_k_mut - 1;
+            }else if k > blocks[0].len() as isize - 1 {
+                k_set = k - blocks[0].len() as isize;
+                grid_z_set = grid_z_set + 1;
+                chunk_k_mut = chunk_k_mut + 1;
+            } 
+            
+            // If block is outisde the chunk border that is currently rendered add it as set block
+            // If the block is inside the currently rendered chunk border put it in change blocks
+
+            if (chunk_distance as i32 - 1) >= chunk_k_mut && (chunk_distance as i32 - 1) >= chunk_i_mut && 0 <= chunk_k_mut && 0 <= chunk_i_mut{
+                
+                change_block.push((chunk_i_mut as usize, chunk_k_mut as usize, i_set as usize, k_set as usize, j, 7))
+
+            }else{
+
+                let key = [grid_x_set.to_string(), grid_z_set.to_string(), i_set.to_string(), k_set.to_string(), j.to_string()].join("");
+
+                if !set_blocks.contains_key(&key){
+                    set_blocks.insert(key, 7);
+                }
+            }
 
         }else{
-
-            let key = [grid_x_set.to_string(), grid_z_set.to_string(), i_set.to_string(), k_set.to_string(), j.to_string()].join("");
-
-            if !set_blocks.contains_key(&key){
-                set_blocks.insert(key, 2);
-            }
+            blocks[i as usize][k as usize][j].id = 7;
         }
-
-    }else{
-        blocks[i as usize][k as usize][j].id = 7;
     }
 }

@@ -55,21 +55,6 @@ impl World{
 
     pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>){
 
-        // Set any blocks. Mostly leaves
-        if self.change_block.len() != 0 && self.unbuilt_models.len() == 0{
-
-            for i in 0..self.change_block.len(){                
-                self.chunk_grid[self.change_block[i].0][self.change_block[i].1].blocks[self.change_block[i].2][self.change_block[i].3][self.change_block[i].4].id = self.change_block[i].5;
-
-                check_blocks_around_block(self, self.change_block[i].0, self.change_block[i].1, self.change_block[i].2, self.change_block[i].3, self.change_block[i].4);
-            }
-
-            self.change_block.clear();
-            for k in 0..self.unbuilt_models.len(){
-                build_mesh_single(self, self.unbuilt_models[k].0, self.unbuilt_models[k].1);
-            }
-            self.unbuilt_models.clear()
-        }
 
         if self.unbuilt_models.len() != 0 {
             //This refresh breaks because the old chunks are replaced by new
@@ -85,6 +70,23 @@ impl World{
 
             build_mesh_single(self, self.unbuilt_models[0].0, self.unbuilt_models[0].1);
             self.unbuilt_models.remove(0);
+        }
+
+        
+        // Set any blocks. Mostly leaves
+        if self.change_block.len() != 0 && self.unbuilt_models.len() == 0{
+
+            for i in 0..self.change_block.len(){                
+                self.chunk_grid[self.change_block[i].0][self.change_block[i].1].blocks[self.change_block[i].2][self.change_block[i].3][self.change_block[i].4].id = self.change_block[i].5;
+
+                check_blocks_around_block(self, self.change_block[i].0, self.change_block[i].1, self.change_block[i].2, self.change_block[i].3, self.change_block[i].4);
+            }
+
+            self.change_block.clear();
+            for k in 0..self.unbuilt_models.len(){
+                build_mesh_single(self, self.unbuilt_models[k].0, self.unbuilt_models[k].1);
+            }
+            self.unbuilt_models.clear()
         }
 
         self.program.set_used();
