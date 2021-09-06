@@ -8,6 +8,8 @@ pub mod world;
 pub mod player;
 pub mod skybox; 
 use std::ffi::CString;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
 
 use std::fs::File;
@@ -19,8 +21,8 @@ fn main() {
     const WINDOW_WIDTH: u32 = 1280;
     const WINDOW_HEIGHT: u32 = 720;
     
-    const SQUARE_CHUNK_WIDTH: usize = 8;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 5;    //Odd numbers ONLYYY
+    const SQUARE_CHUNK_WIDTH: usize = 16;           //16;
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 17;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
 
@@ -67,34 +69,33 @@ fn main() {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
 
+    // let mut basic_multi = BasicMulti::default().set_seed(60);
+    // basic_multi.frequency = 0.1;
 
-    let mut basic_multi = BasicMulti::default().set_seed(60);
-    basic_multi.frequency = 0.1;
-
-    let mut ridged = RidgedMulti::new().set_seed(60);
-    let mut fbm = Fbm::new().set_seed(60);
-    fbm.persistence = 1.0;
-    fbm.frequency = 0.01;
-    ridged.attenuation = 7.07;
-    ridged.persistence = 2.02;
-    ridged.octaves = 3;
-    ridged.frequency = 7.01 as f64;
-    basic_multi.frequency = 0.000004 as f64;
-    basic_multi.octaves = 3;
+    // let mut ridged = RidgedMulti::new().set_seed(60);
+    // let mut fbm = Fbm::new().set_seed(60);
+    // fbm.persistence = 1.0;
+    // fbm.frequency = 0.01;
+    // ridged.attenuation = 7.07;
+    // ridged.persistence = 2.02;
+    // ridged.octaves = 3;
+    // ridged.frequency = 7.01 as f64;
+    // basic_multi.frequency = 0.000004 as f64;
+    // basic_multi.octaves = 3;
     
-    let blend = Blend::new(&fbm, &ridged, &basic_multi);
-    let mut float1:f64 = -1.0;
-    let mut float2:f64 = 1.0;
-    let mut w = File::create("C:/Users/Rokas/Desktop/rust_minecraft/minecraft_rust/test2.txt").unwrap();
+    // let blend = Blend::new(&fbm, &ridged, &basic_multi);
+    // let mut float1:f64 = -1.0;
+    // let mut float2:f64 = 1.0;
+    // let mut w = File::create("C:/Users/Rokas/Desktop/rust_minecraft/minecraft_rust/test2.txt").unwrap();
 
-    for i in 0..1000{
-        let value1: f64 = float2 as f64;
-        let value2: f64 = float1 as f64;
-        let value = blend.get([value1, value2]);
-        writeln!(&mut w, "Value1: {} value2: {} blend: {}", value1, value2, value).unwrap();
-        float1 = float1 - 1.0;
-        float2 = float2 + 1.0;
-    }
+    // for i in 0..1000{
+    //     let value1: f64 = float2 as f64;
+    //     let value2: f64 = float1 as f64;
+    //     let value = blend.get([value1, value2]);
+    //     writeln!(&mut w, "Value1: {} value2: {} blend: {}", value1, value2, value).unwrap();
+    //     float1 = float1 - 1.0;
+    //     float2 = float2 + 1.0;
+    // }
     // println!("FINISHED");
 
     // let value1: f64 = ((z_pos - 30.0 + grid_z as f32)* 0.200) as f64;
@@ -108,7 +109,7 @@ fn main() {
 
     let mut time_increment: f32 = 0.0;
     let camera_pos = glm::vec3(0.0, 0.0, 0.0);
-    let mut world: world::World = world::World::new(
+    let mut world = Arc::new(Mutex::new(world::World::new(
         &camera_pos, 
         &shader_program, 
         &SQUARE_CHUNK_WIDTH, 
@@ -119,8 +120,10 @@ fn main() {
         &UNDERGROUND_HEIGHT,
         &SKY_HEIGHT,
         &NOISE_RESOLUTION,
-    );
-    let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos);
+    )));
+    let world_player = Arc::clone(&world);
+
+    let mut player: player::Player = player::Player::new(&mut world_player.lock().unwrap(), PLAYER_HEIGHT, camera_pos);
 
     
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
@@ -128,12 +131,39 @@ fn main() {
     const TIME_BETWEEN_FRAMES: u64 = 20;
     let mut event_pump = sdl.event_pump().unwrap();
     let mut stopwatch = stopwatch::Stopwatch::new();
+
+    let mut thread_keep_alive = true;
+    let mut player_thread_waiting = false;
+    
+    thread::spawn(move || {
+        let world_thread = Arc::clone(&world);
+        while thread_keep_alive{
+            std::thread::sleep(std::time::Duration::from_millis(5));
+            // println!("{}", player_thread_waiting);
+            if !player_thread_waiting{
+                let mut guard = world_thread.lock().unwrap();
+                guard.render_loop();
+                drop(guard);
+            }
+        }
+    });
+
+    // let mut stopwatch2 = stopwatch::Stopwatch::new();
+
     'main: loop {
         stopwatch.reset();
         stopwatch.start();
-        let close_game: bool = player.handle_events(&mut world, &mut event_pump);
-        
+
+        // stopwatch2.reset();
+        // stopwatch2.start();
+        player_thread_waiting = true;
+        let mut guard = world_player.lock().unwrap();
+        player_thread_waiting = false;
+
+        // println!("Took {} ms",stopwatch2.elapsed_ms());
+        let close_game: bool = player.handle_events(&mut guard, &mut event_pump);
         if close_game {
+            thread_keep_alive = false;
             break 'main
         }
         //Rendering
@@ -153,7 +183,8 @@ fn main() {
             let view_loc = gl::GetUniformLocation(shader_program.id(), "view".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
-            world::World::draw(&mut world, &player.camera_pos);
+            world::World::draw(&mut guard, &player.camera_pos);
+            drop(guard);
 
 
 

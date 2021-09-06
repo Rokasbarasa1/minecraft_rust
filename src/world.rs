@@ -21,10 +21,14 @@ pub struct World {
     //Index of i, index of k, check visibility, rebuild the block, rebuilt bool
     pub unbuilt_models: Vec<(usize, usize, bool, bool, bool)>,
     pub set_blocks: HashMap<String, u8>,
-    pub change_block: Vec<(usize, usize, usize, usize, usize, u8)>
+    pub change_block: Vec<(usize, usize, usize, usize, usize, u8)>,
+    pub build_mesh: Vec<(usize, usize)>
 }
 
+// Make a thread method that iterates over the regenerate and get visibility functions
+
 impl World{
+
     pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8, noise_resolution: &f32) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
@@ -35,7 +39,8 @@ impl World{
             program: program.clone(),
             unbuilt_models: vec![],
             set_blocks: HashMap::new(),
-            change_block: vec![]
+            change_block: vec![],
+            build_mesh: vec![]
         };
 
         //LOAD TEXTURES
@@ -53,10 +58,10 @@ impl World{
         return world;
     }
 
-    pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>){
-
-
+    //  Make the chunk grid as a variables with ARC<> and then copy the thing when you use it i guess 
+    pub fn render_loop(&mut self){
         if self.unbuilt_models.len() != 0 {
+            // println!("Thead unbuilt");
 
             if self.unbuilt_models[0].3 && !self.unbuilt_models[0].4{
                 self.chunk_grid[self.unbuilt_models[0].0][self.unbuilt_models[0].1].regenerate(&mut self.change_block, self.unbuilt_models[0].0, self.unbuilt_models[0].1, &mut self.set_blocks);
@@ -76,26 +81,32 @@ impl World{
                 check_chunk_visibility(self, self.unbuilt_models[0].0, self.unbuilt_models[0].1);
             }
 
-            build_mesh_single(self, self.unbuilt_models[0].0, self.unbuilt_models[0].1);
+            self.build_mesh.push((self.unbuilt_models[0].0, self.unbuilt_models[0].1));
             self.unbuilt_models.remove(0);
         }
 
-        
         // Set any blocks. Mostly leaves
         if self.change_block.len() != 0 && self.unbuilt_models.len() == 0{
+            // println!("Thead change");
 
             for i in 0..self.change_block.len(){                
                 self.chunk_grid[self.change_block[i].0][self.change_block[i].1].blocks[self.change_block[i].2][self.change_block[i].3][self.change_block[i].4].id = self.change_block[i].5;
-
                 check_blocks_around_block(self, self.change_block[i].0, self.change_block[i].1, self.change_block[i].2, self.change_block[i].3, self.change_block[i].4);
             }
-
+        
             self.change_block.clear();
             for k in 0..self.unbuilt_models.len(){
-                build_mesh_single(self, self.unbuilt_models[k].0, self.unbuilt_models[k].1);
+                self.build_mesh.push((self.unbuilt_models[k].0, self.unbuilt_models[k].1));
             }
-            self.unbuilt_models.clear()
+            self.unbuilt_models.clear();
         }
+    }
+
+    pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>){
+        for i in 0..self.build_mesh.len(){
+            build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
+        }
+        self.build_mesh.clear();
 
         self.program.set_used();
         unsafe {
@@ -122,7 +133,8 @@ impl World{
                     gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
                     gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
                 }
-                if change_direction == 0 && self.unbuilt_models.len() == 0 && !distance(self.view_distance, &camera_pos, &self.chunk_grid[i][k].position){
+
+                if change_direction == 0 && self.unbuilt_models.len() == 0 && self.change_block.len() == 0 && !distance(self.view_distance, &camera_pos, &self.chunk_grid[i][k].position){
                     change_direction = get_direction(&camera_pos, &self.chunk_grid[i][k].position);
                 }
             }
@@ -400,6 +412,20 @@ impl World{
             }
         }
     }
+}
+
+fn set_blocks(world: &mut World){
+    for i in 0..world.change_block.len(){                
+        world.chunk_grid[world.change_block[i].0][world.change_block[i].1].blocks[world.change_block[i].2][world.change_block[i].3][world.change_block[i].4].id = world.change_block[i].5;
+
+        check_blocks_around_block(world, world.change_block[i].0, world.change_block[i].1, world.change_block[i].2, world.change_block[i].3, world.change_block[i].4);
+    }
+
+    world.change_block.clear();
+    for k in 0..world.unbuilt_models.len(){
+        build_mesh_single(world, world.unbuilt_models[k].0, world.unbuilt_models[k].1);
+    }
+    world.unbuilt_models.clear()
 }
 
 fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: u8){
