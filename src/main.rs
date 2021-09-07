@@ -8,9 +8,10 @@ pub mod world;
 pub mod player;
 pub mod skybox; 
 use std::ffi::CString;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::thread;
 use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
+use parking_lot::{Mutex, MutexGuard};
 
 use std::fs::File;
 use std::io::{Write};
@@ -22,7 +23,7 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 17;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 15;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
 
@@ -123,7 +124,7 @@ fn main() {
     )));
     let world_player = Arc::clone(&world);
 
-    let mut player: player::Player = player::Player::new(&mut world_player.lock().unwrap(), PLAYER_HEIGHT, camera_pos);
+    let mut player: player::Player = player::Player::new(&mut world_player.lock(), PLAYER_HEIGHT, camera_pos);
 
     
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
@@ -137,30 +138,24 @@ fn main() {
     
     thread::spawn(move || {
         let world_thread = Arc::clone(&world);
-        while thread_keep_alive{
-            std::thread::sleep(std::time::Duration::from_millis(5));
-            // println!("{}", player_thread_waiting);
-            if !player_thread_waiting{
-                let mut guard = world_thread.lock().unwrap();
-                guard.render_loop();
-                drop(guard);
-            }
+        loop{
+            let mut guard = world_thread.lock();
+            // println!("Got lock");
+            guard.render_loop();
+            MutexGuard::unlock_fair(guard);
         }
     });
 
-    // let mut stopwatch2 = stopwatch::Stopwatch::new();
 
     'main: loop {
         stopwatch.reset();
         stopwatch.start();
 
-        // stopwatch2.reset();
-        // stopwatch2.start();
-        player_thread_waiting = true;
-        let mut guard = world_player.lock().unwrap();
-        player_thread_waiting = false;
+        // println!("Player waiting");
+        let mut guard = world_player.lock();
+        // println!("Player got lock");
 
-        // println!("Took {} ms",stopwatch2.elapsed_ms());
+
         let close_game: bool = player.handle_events(&mut guard, &mut event_pump);
         if close_game {
             thread_keep_alive = false;
@@ -184,7 +179,7 @@ fn main() {
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
             world::World::draw(&mut guard, &player.camera_pos);
-            drop(guard);
+            MutexGuard::unlock_fair(guard);
 
 
 
@@ -233,10 +228,6 @@ fn main() {
             //     println!("Axis: {}Z",z_sign);
             // }
         }
-        
-        // stopwatch::Stopwatch::stop(&mut stopwatch);
-        // stopwatch::Stopwatch::reset(&mut stopwatch);
-
 
         if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
             std::thread::sleep(std::time::Duration::from_millis(TIME_BETWEEN_FRAMES - stopwatch.elapsed_ms() as u64));

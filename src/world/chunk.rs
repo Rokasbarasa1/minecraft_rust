@@ -233,47 +233,37 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
 
     let blend = Blend::new(&fbm, &ridged, &basic_multi);
-    // blend.control // Negative value for more value 1 positive for more value 2
+
     let mut rng = StdRng::seed_from_u64(world_gen_seed as u64 + powi(grid_x as f64, 2).sqrt() as u64 + powi(grid_z as f64, 2).sqrt() as u64);    
     let water_level: u8 = 11 + underground_height;
-
+    // println!("pre generate ms {} ",stopwatch.elapsed_ms());
+    // let mut stopwatch1 = stopwatch::Stopwatch::new();
+    
     for i in 0..square_chunk_width{
+        // stopwatch1.reset();
+        // stopwatch1.start();
         if !overwrite {
             let collumn: Vec<Vec<block::Block>> = vec![];
             blocks.push(collumn);
         }
         
         for k in 0..square_chunk_width {
+            
             if !overwrite {
                 let row: Vec<block::Block> = vec![];
                 blocks[i].push(row);
             }
             
-            let value1: f64 = (z_pos + grid_z as f32) as f64;
-            let value2: f64 = (x_pos + grid_x as f32) as f64;
-            let mut value = blend.get([value1, value2]);
-            if value > 1.0 || value < -1.0{
-                println!("ValueNoise {} value1: {} value1: {}", value, value1, value2);
-            }
-            value = (value + 1.0)/2.0;
-            let max_int = map_value(value, 0, mid_height);
-            let max: u8;
-            if max_int < 0 {
-                max = (max_int * -1) as u8 + underground_height;
-            }else{
-                max = max_int as u8 + underground_height;
-            }
+            let value = (blend.get([(z_pos + grid_z as f32) as f64, (x_pos + grid_x as f32) as f64]) + 1.0)/2.0;
+            let max = map_value(value, 0, mid_height) as u8 + underground_height;
 
-            let has_plant;
+            let mut has_plant = false;
             if rng.gen_range(1..1000) == 1 {
                 has_plant = true;
                 if max> water_level{
                     trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
                 }
-            }else{
-                has_plant = false;
             }
-
             for j in 0..(mid_height + underground_height + sky_height) as usize{
                 let mut number: u8;
 
@@ -284,6 +274,12 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 //     number = 1;
                 // }else{
                 //     number = 2;
+                // }
+                
+                // if !overwrite{
+                //     blocks[i as usize][k as usize].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
+                // }else{
+                //     blocks[i as usize][k as usize][j as usize].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
                 // }
                 
                 number = get_set_block(set_blocks, grid_x, grid_z, i, k, j);
@@ -299,11 +295,14 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 }else{
                     blocks[i as usize][k as usize][j as usize].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
                 }
+
                 y_pos += 1.0;
             }
             y_pos = y_pos_temp;
             x_pos -= 1.0;
+            
         }
+        // println!("Before blocks ms {}", stopwatch1.elapsed_ms());
         x_pos = x_pos_temp;
         z_pos -= 1.0;
     }
