@@ -37,7 +37,7 @@ impl Block {
     }
 
     pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>, block_model: &BlockModel){
-        if self.id != 240 && self.visible {
+        if self.visible {
             for i in 0..self.sides.len() {
                 if self.sides[i] == true{
                     match i {

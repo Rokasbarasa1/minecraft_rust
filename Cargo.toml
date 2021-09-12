@@ -18,6 +18,8 @@ noise = "0.7.0"
 flamegraph = "0.4.0"
 rand = "0.8.4"
 parking_lot = "0.11.2"
+rayon = "1.5.1"
+rand_xoshiro = "0.6.0"
 
 [profile.release]
 debug = true

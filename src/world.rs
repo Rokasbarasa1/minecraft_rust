@@ -718,45 +718,52 @@ fn setup_texture(world: &mut World) {
 
 
 fn check_visibility(world: &mut World){
-    // let mut stopwatch = Stopwatch::new();
-
     for i in 0..world.chunk_grid.len() {
         for k in 0..world.chunk_grid[i].len() {
-            // stopwatch.reset();
-            // stopwatch.start();
             check_chunk_visibility(world, i, k);
-            // stopwatch.stop();
-            // println!("visibility {} ms", stopwatch.elapsed_ms())
         }
     }
 }
 
 fn check_chunk_visibility(world: &mut World, i: usize, k: usize){
-    for j in 0..world.chunk_grid[i][k].blocks.len() {
-        for l in 0..world.chunk_grid[i][k].blocks[j].len() {
-            for m in 0..world.chunk_grid[i][k].blocks[j][l].len() {
-                check_block_sides(&mut world.chunk_grid , i.clone(), k.clone(), j.clone(), l.clone(), m.clone(), world.chunk_width as usize);
+    let mut layer_visibility: Vec<bool> = vec![];
+
+    for i in 0..world.chunk_grid[i][k].blocks[0][0].len(){
+        layer_visibility.push(false);
+    }
+
+    for m in 0..world.chunk_grid[i][k].blocks[0][0].len() {
+        for j in 0..world.chunk_grid[i][k].blocks.len() {
+            for l in 0..world.chunk_grid[i][k].blocks[j].len() {
+                let visible = check_block_sides(&mut world.chunk_grid , i.clone(), k.clone(), j.clone(), l.clone(), m.clone(), world.chunk_width as usize);
+                
+                if visible && layer_visibility[m] == false {
+                    layer_visibility[m] = true;
+                }
             }
         }
     }
+
+    world.chunk_grid[i][k].set_layer_visibility(layer_visibility)
 }
 
-fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: usize, l: usize, m: usize, chunk_width: usize){
+fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: usize, l: usize, m: usize, chunk_width: usize) -> bool{
     let block_id = chunk_grid[i][k].blocks[j][l][m].id;
     
     if chunk_grid[i][k].blocks[j][l][m].is_air() {
         chunk_grid[i][k].blocks[j][l][m].visible = false;
+        return false;
     }else {
         let z_chunk_flag: u32; 
-        if i == 0 { z_chunk_flag = 0 }else if i == chunk_grid.len()-1 { z_chunk_flag = 2 } else { z_chunk_flag = 1 }; //Z axis
         let x_chunk_flag: u32; 
-        if k == 0 { x_chunk_flag = 0 }else if k == chunk_grid.len()-1 { x_chunk_flag = 2 } else { x_chunk_flag = 1 }; //X axis
-
         let z_block_flag: u32; 
-        if j == 0 { z_block_flag = 0 }else if j == chunk_width-1 { z_block_flag = 2 } else { z_block_flag = 1 }; //Z axis
         let x_block_flag: u32; 
-        if l == 0 { x_block_flag = 0 }else if l == chunk_width-1 { x_block_flag = 2 } else { x_block_flag = 1 }; //X axis
         let y_block_flag: u32; 
+
+        if i == 0 { z_chunk_flag = 0 }else if i == chunk_grid.len()-1 { z_chunk_flag = 2 } else { z_chunk_flag = 1 }; //Z axis
+        if k == 0 { x_chunk_flag = 0 }else if k == chunk_grid.len()-1 { x_chunk_flag = 2 } else { x_chunk_flag = 1 }; //X axis
+        if j == 0 { z_block_flag = 0 }else if j == chunk_width-1 { z_block_flag = 2 } else { z_block_flag = 1 }; //Z axis
+        if l == 0 { x_block_flag = 0 }else if l == chunk_width-1 { x_block_flag = 2 } else { x_block_flag = 1 }; //X axis
         if m == 0 { y_block_flag = 0 }else if m == chunk_grid[i][k].blocks[j][l].len()-1 { y_block_flag = 2 } else { y_block_flag = 1 }; //Y axis
 
         // I = Z chunk, K = X chunk, J = Z block, L = X block, M = Y block
@@ -765,7 +772,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         // //Z block go +
         if z_block_flag == 2{
             if z_chunk_flag == 2 || chunk_grid.len()-1 == 0 && z_chunk_flag == 0{
-                sides.push(true);
+                sides.push(false);
             }else{
                 if chunk_grid[i+1][k].blocks[0][l][m].is_air() || block_id != 3 && chunk_grid[i+1][k].blocks[0][l][m].is_water(){ 
                     sides.push(true); 
@@ -785,7 +792,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         // Z block go -
         if z_block_flag == 0{
             if z_chunk_flag == 0{
-                sides.push(true);
+                sides.push(false);
             }else{
                 if chunk_grid[i-1][k].blocks[chunk_width-1][l][m].is_air() || block_id != 3 && chunk_grid[i-1][k].blocks[chunk_width-1][l][m].is_water() { 
                     sides.push(true); 
@@ -804,7 +811,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         // X block go +
         if x_block_flag == 2{
             if x_chunk_flag == 2 || chunk_grid.len()-1 == 0 && x_chunk_flag == 0{
-                sides.push(true);
+                sides.push(false);
             }else{
                 if chunk_grid[i][k+1].blocks[j][0][m].is_air() || block_id != 3 && chunk_grid[i][k+1].blocks[j][0][m].is_water()  { 
                     sides.push(true); 
@@ -823,7 +830,7 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         // X block go -
         if x_block_flag == 0{
             if x_chunk_flag == 0{
-                sides.push(true);
+                sides.push(false);
             }else{
                 if chunk_grid[i][k-1].blocks[j][chunk_width-1][m].is_air() || block_id != 3 && chunk_grid[i][k-1].blocks[j][chunk_width-1][m].is_water()  { 
                     sides.push(true); 
@@ -879,55 +886,76 @@ fn check_block_sides(chunk_grid: &mut Vec<Vec<Chunk>>, i: usize, k: usize, j: us
         }else{
             chunk_grid[i][k].blocks[j][l][m].visible = false;
         }
+        return visible == 1;
     } 
 }
 
 fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l: usize, m: usize){
     check_block_sides(&mut world.chunk_grid, i, k, j, l, m, world.chunk_width as usize);
+    world.chunk_grid[i][k].changed_block_visibility(m);
+    if !world.unbuilt_models.contains(&(i,k,false,false,false)){
+        push_unbuilt_to_start((i,k,false,false,false), &mut world.unbuilt_models);
+    }
     //Check up 
     if world.chunk_grid[i][k].blocks[j][l].len() != 1 && m != world.chunk_grid[i][k].blocks[j][l].len() -1  && m < world.chunk_grid[i][k].blocks[j][l].len() + 1 {
         check_block_sides(&mut world.chunk_grid, i, k, j, l, m+1, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m+1);
     }
     //Check down
     if world.chunk_grid[i][k].blocks[j][l].len() != 1 && m != 0 {
         check_block_sides(&mut world.chunk_grid, i, k, j, l, m-1, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m-1);
     }
 
 
     //Check left
     if j != 0  {
         check_block_sides(&mut world.chunk_grid, i, k, j-1, l, m, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m);
     }
     else if i != 0 {
         check_block_sides(&mut world.chunk_grid, i-1, k, world.chunk_width as usize-1, l, m, world.chunk_width as usize);
-        push_unbuilt_to_start((i-1,k,false,false,false), &mut world.unbuilt_models);
+        world.chunk_grid[i-1][k].changed_block_visibility(m);
+        if !world.unbuilt_models.contains(&(i-1,k,false,false,false)){
+            push_unbuilt_to_start((i-1,k,false,false,false), &mut world.unbuilt_models);
+        }
     }
     //Check right
     if j != world.chunk_width as usize -1 {
         check_block_sides(&mut world.chunk_grid, i, k, j+1, l, m, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m);
     }else if i != world.chunk_grid.len()-1 {
         check_block_sides(&mut world.chunk_grid, i+1, k, 0, l, m, world.chunk_width as usize);
-        push_unbuilt_to_start((i+1,k,false,false,false), &mut world.unbuilt_models);
+        world.chunk_grid[i+1][k].changed_block_visibility(m);
+        if !world.unbuilt_models.contains(&(i+1,k,false,false,false)){
+            push_unbuilt_to_start((i+1,k,false,false,false), &mut world.unbuilt_models);
+        }
     } 
 
 
     //Check front 
     if l != 0  {
         check_block_sides(&mut world.chunk_grid, i, k, j, l-1, m, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m);
+
     }else if k != 0{
         check_block_sides(&mut world.chunk_grid, i, k-1, j, world.chunk_width as usize-1, m, world.chunk_width as usize);
-        push_unbuilt_to_start((i,k-1,false,false,false), &mut world.unbuilt_models);
-
+        world.chunk_grid[i][k-1].changed_block_visibility(m);
+        if !world.unbuilt_models.contains(&(i,k-1,false,false,false)){
+            push_unbuilt_to_start((i,k-1,false,false,false), &mut world.unbuilt_models);
+        }
     }
     //Check back
     if l != world.chunk_width as usize -1{
         check_block_sides(&mut world.chunk_grid, i, k, j, l+1, m, world.chunk_width as usize);
+        world.chunk_grid[i][k].changed_block_visibility(m);
     }else if k != world.chunk_grid[i].len()-1 {
         check_block_sides(&mut world.chunk_grid, i, k+1, j, 0, m, world.chunk_width as usize);
-        push_unbuilt_to_start((i,k+1,false,false,false), &mut world.unbuilt_models);
+        world.chunk_grid[i][k+1].changed_block_visibility(m);
+        if !world.unbuilt_models.contains(&(i,k+1,false,false,false)){
+            push_unbuilt_to_start((i,k+1,false,false,false), &mut world.unbuilt_models);
+        }
     }
-
-    push_unbuilt_to_start((i,k,false,false,false), &mut world.unbuilt_models);
 }
 
 

@@ -22,8 +22,8 @@ fn main() {
     const WINDOW_WIDTH: u32 = 1280;
     const WINDOW_HEIGHT: u32 = 720;
     
-    const SQUARE_CHUNK_WIDTH: usize = 16;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 15;    //Odd numbers ONLYYY
+    const SQUARE_CHUNK_WIDTH: usize = 10;           //16;
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11;    //Odd numbers ONLYYY
     const VIEW_DISTANCE: f32 = 200.0;               
     const PLAYER_HEIGHT: f32 = 1.5;
 
@@ -110,7 +110,7 @@ fn main() {
 
     let mut time_increment: f32 = 0.0;
     let camera_pos = glm::vec3(0.0, 0.0, 0.0);
-    let mut world = Arc::new(Mutex::new(world::World::new(
+    let mut world = world::World::new(
         &camera_pos, 
         &shader_program, 
         &SQUARE_CHUNK_WIDTH, 
@@ -121,10 +121,9 @@ fn main() {
         &UNDERGROUND_HEIGHT,
         &SKY_HEIGHT,
         &NOISE_RESOLUTION,
-    )));
-    let world_player = Arc::clone(&world);
-
-    let mut player: player::Player = player::Player::new(&mut world_player.lock(), PLAYER_HEIGHT, camera_pos);
+    );
+    
+    let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos);
 
     
     //let skybox: skybox::Skybox = skybox::Skybox::new(skybox_shader.clone());
@@ -133,32 +132,12 @@ fn main() {
     let mut event_pump = sdl.event_pump().unwrap();
     let mut stopwatch = stopwatch::Stopwatch::new();
 
-    let mut thread_keep_alive = true;
-    let mut player_thread_waiting = false;
-    
-    thread::spawn(move || {
-        let world_thread = Arc::clone(&world);
-        loop{
-            let mut guard = world_thread.lock();
-            // println!("Got lock");
-            guard.render_loop();
-            MutexGuard::unlock_fair(guard);
-        }
-    });
-
-
     'main: loop {
         stopwatch.reset();
         stopwatch.start();
 
-        // println!("Player waiting");
-        let mut guard = world_player.lock();
-        // println!("Player got lock");
-
-
-        let close_game: bool = player.handle_events(&mut guard, &mut event_pump);
+        let close_game: bool = player.handle_events(&mut world, &mut event_pump);
         if close_game {
-            thread_keep_alive = false;
             break 'main
         }
         //Rendering
@@ -178,8 +157,7 @@ fn main() {
             let view_loc = gl::GetUniformLocation(shader_program.id(), "view".as_ptr() as *const std::os::raw::c_char);
             gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view[0][0]);
 
-            world::World::draw(&mut guard, &player.camera_pos);
-            MutexGuard::unlock_fair(guard);
+            world::World::draw(&mut world, &player.camera_pos);
 
 
 
@@ -230,7 +208,10 @@ fn main() {
         }
 
         if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
-            std::thread::sleep(std::time::Duration::from_millis(TIME_BETWEEN_FRAMES - stopwatch.elapsed_ms() as u64));
+            world.render_loop();
+            if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
+                std::thread::sleep(std::time::Duration::from_millis(TIME_BETWEEN_FRAMES - stopwatch.elapsed_ms() as u64));
+            }
         }
     }
 }

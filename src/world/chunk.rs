@@ -1,14 +1,18 @@
 extern crate noise;
 use glm::ext::powi;
+use parking_lot::{Mutex, MutexGuard};
 use rand::Rng;
 use rand::rngs::StdRng;
 use rand::{SeedableRng};
 use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use super::{block_model::BlockModel};
 use std::collections::HashMap;
 extern crate stopwatch;
 pub mod block;
-
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
+use std::time::{Instant};
 pub struct Chunk {
     pub position: glm::Vector3<f32>,
     pub blocks: Vec<Vec<Vec<block::Block>>>,
@@ -37,7 +41,8 @@ pub struct Chunk {
     pub sky_height: u8,
     pub mid_height: u8,
     pub noise_resolution: f32,
-    pub chunk_distance: usize
+    pub chunk_distance: usize,
+    pub visible_layers: Vec<bool>,
 }
 
 impl Chunk{
@@ -86,7 +91,8 @@ impl Chunk{
             sky_height: *sky_height,
             mid_height: *mid_height,
             noise_resolution: *noise_resolution,
-            chunk_distance: chunk_distance
+            chunk_distance: chunk_distance,
+            visible_layers: vec![],
         };
     }
 
@@ -104,6 +110,8 @@ impl Chunk{
     }
 
     pub fn build_mesh(&mut self, block_model: &BlockModel) {
+        let mut stopwatch = stopwatch::Stopwatch::new();
+        stopwatch.start();
         if self.vao != 0 || self.transparent_vao != 0{
             unsafe {
                 gl::DeleteVertexArrays(1, &self.vao);
@@ -140,13 +148,18 @@ impl Chunk{
         self.transparent_vao = 0;
         self.transparent_vbos = (0,0,0,0);
         self.transparent_chunk_model = (0,0,0);
-        for i in 0..self.blocks.len() {
-            for k in 0..self.blocks[i].len() {
-                for j in 0..self.blocks[i][k].len() {
-                    block::Block::get_mesh(&self.blocks[i][k][j], &mut self.vertices, block_model);
+        for j in 0..self.blocks[0][0].len() {
+            if self.visible_layers[j]{
+                // println!("Found true");
+                for i in 0..self.blocks.len() {
+                    for k in 0..self.blocks[i].len() {
+                        block::Block::get_mesh(&self.blocks[i][k][j], &mut self.vertices, block_model);
+                    }
                 }
             }
         }
+        stopwatch.stop();
+        // println!("Time for build mesh ms: {}", stopwatch.elapsed_ms());
     }
     
     pub fn populate_mesh(&mut self){
@@ -201,6 +214,23 @@ impl Chunk{
         self.transparent_vao = vao;
         self.transparent_vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
     }
+
+    pub fn set_layer_visibility(&mut self, visible_layers: Vec<bool>){
+        self.visible_layers = visible_layers;
+    }
+
+    pub fn changed_block_visibility(&mut self, m: usize){
+        let mut visible = false;
+        for i in 0..self.blocks.len() {
+            for k in 0..self.blocks[i].len() {
+                if self.blocks[i][k][m].visible{
+                    visible = true;
+                    break;
+                }
+            }
+        }
+        self.visible_layers[m] = visible;
+    }
 }
 
 fn map_value(value: f64, minimum: u8, maximum: u8) -> i32{
@@ -210,18 +240,18 @@ fn map_value(value: f64, minimum: u8, maximum: u8) -> i32{
 fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: glm::Vec3, grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: u8, underground_height: u8, sky_height: u8, overwrite: bool, set_blocks: &mut HashMap<String, u8>, resolution: f32, chunk_distance: usize) -> glm::Vec3{
     let mut stopwatch = stopwatch::Stopwatch::new();
     stopwatch.start();
-    let mut x_pos = position.x;
-    let mut z_pos = position.z;
-    let mut y_pos = position.y;
-    let x_pos_temp = position.x;
-    let y_pos_temp = position.y;
+
+    let water_level: u8 = 11 + underground_height;
+
+    let set_blocks_arc = Arc::new(Mutex::new(set_blocks));
+    let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
+    let mut collumns: Vec<Vec<(u8, bool, f32, f32)>> = vec![];
 
     let mut basic_multi = BasicMulti::default().set_seed(60);
     basic_multi.frequency = 0.1;
 
-    let mut ridged = RidgedMulti::new().set_seed(60);
-    let mut fbm = Fbm::new().set_seed(60);
-    // fbm.persistence = 1.0;
+    let mut ridged = RidgedMulti::default().set_seed(60);
+    let mut fbm = Fbm::default().set_seed(60);
     fbm.frequency = 0.01;
     ridged.attenuation = 7.07;
     ridged.persistence = 2.02;
@@ -229,45 +259,60 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     ridged.frequency = 7.01 as f64;
     basic_multi.frequency = 0.000004 as f64;
     basic_multi.octaves = 3;
-    
-    let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
-
     let blend = Blend::new(&fbm, &ridged, &basic_multi);
 
-    let mut rng = StdRng::seed_from_u64(world_gen_seed as u64 + powi(grid_x as f64, 2).sqrt() as u64 + powi(grid_z as f64, 2).sqrt() as u64);    
-    let water_level: u8 = 11 + underground_height;
-    // println!("pre generate ms {} ",stopwatch.elapsed_ms());
-    // let mut stopwatch1 = stopwatch::Stopwatch::new();
-    
     for i in 0..square_chunk_width{
-        // stopwatch1.reset();
-        // stopwatch1.start();
-        if !overwrite {
-            let collumn: Vec<Vec<block::Block>> = vec![];
-            blocks.push(collumn);
-        }
-        
+        collumns.push(vec![]);
+
         for k in 0..square_chunk_width {
-            
-            if !overwrite {
-                let row: Vec<block::Block> = vec![];
-                blocks[i].push(row);
-            }
-            
-            let value = (blend.get([(z_pos + grid_z as f32) as f64, (x_pos + grid_x as f32) as f64]) + 1.0)/2.0;
+            let z = position.z - 1.0 * i as f32;
+            let x = position.x - 1.0 * k as f32;
+
+            let value = (blend.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
             let max = map_value(value, 0, mid_height) as u8 + underground_height;
 
-            let mut has_plant = false;
-            if rng.gen_range(1..1000) == 1 {
-                has_plant = true;
-                if max> water_level{
+            let mut has_tree = false;
+            // let seed = world_gen_seed as u64 + powi(grid_x as f64 + grid_z as f64 + z as f64 + x as f64, 2).sqrt() as u64 + max as u64
+            let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
+            if rng.gen_range(1..50) == 1{
+                has_tree = true;
+                if max > water_level+2{
                     trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
                 }
             }
-            for j in 0..(mid_height + underground_height + sky_height) as usize{
+
+            collumns[i].push((max, has_tree, z, x));
+        }
+    }
+    let collumns = Arc::new(Mutex::new(&collumns));
+
+
+    if !overwrite { 
+        for i in 0..square_chunk_width{
+            let collumn: Vec<Vec<block::Block>> = vec![];
+            blocks.push(collumn);
+            for k in 0..square_chunk_width {
+                let row: Vec<block::Block> = vec![];
+                blocks[i].push(row);
+
+                for j in 0..(mid_height + underground_height + sky_height) as usize{
+                    blocks[i][k].push(block::Block::init(glm::vec3(0.0, 0.0, 0.0), 1));
+                }
+            }
+        }
+    }
+
+    // Fancy way to iterate over the vector. It makes a thread for each of the vectors in the vector
+    (blocks).par_iter_mut().enumerate().for_each(|(i, val)|  {
+        let collumns_t = Arc::clone(&collumns);
+        let set_blocks_arc_t = Arc::clone(&set_blocks_arc);
+        let set_blocks_t = set_blocks_arc_t.lock().clone();
+        for k in 0..val.len() {
+            let collumn_values = collumns_t.lock()[i][k].clone();
+            for j in 0..val[k].len(){    
                 let mut number: u8;
 
-                // CHUNK TESTING BLOCK BREAKING
+
                 // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
                 //     number = 0;
                 // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
@@ -275,41 +320,27 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 // }else{
                 //     number = 2;
                 // }
-                
-                // if !overwrite{
-                //     blocks[i as usize][k as usize].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
-                // }else{
-                //     blocks[i as usize][k as usize][j as usize].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
-                // }
-                
-                number = get_set_block(set_blocks, grid_x, grid_z, i, k, j);
+
+                number = get_set_block(&set_blocks_t, grid_x, grid_z, i, k, j);
                 if number == 7{
-                    remove_key(set_blocks, grid_x, grid_z, i, k, j);
+                    remove_key(&mut set_blocks_arc_t.lock(), grid_x, grid_z, i, k, j);
                 }
                 if number == 241{
-                    number = get_block_type(j as u8, underground_height+max, water_level, has_plant, underground_height, sky_height, mid_height + underground_height + sky_height);
+                    number = get_block_type(j as u8, underground_height + collumn_values.0, water_level, collumn_values.1, underground_height, sky_height, mid_height + underground_height + sky_height);
                 }
                 
-                if !overwrite{
-                    blocks[i as usize][k as usize].push(block::Block::init(glm::vec3(x_pos, y_pos, z_pos), number));
-                }else{
-                    blocks[i as usize][k as usize][j as usize].regenerate(glm::vec3(x_pos, y_pos, z_pos), number);
-                }
-
-                y_pos += 1.0;
+                val[k as usize][j as usize].regenerate(glm::vec3(collumn_values.3, position.y + 1.0 * j as f32, collumn_values.2), number);
             }
-            y_pos = y_pos_temp;
-            x_pos -= 1.0;
-            
         }
-        // println!("Before blocks ms {}", stopwatch1.elapsed_ms());
-        x_pos = x_pos_temp;
-        z_pos -= 1.0;
-    }
+    });
+    
 
     for i in 0..trees.len(){
-        set_tree(change_block, chunk_i, chunk_k, blocks, set_blocks, trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, chunk_distance, (mid_height + underground_height + sky_height) as usize);
+        set_tree(change_block, chunk_i, chunk_k, blocks, &mut set_blocks_arc.lock(), trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, chunk_distance, (mid_height + underground_height + sky_height) as usize);
     }
+    // let now = Instant::now();
+    // println!("ns {} for tree build", now.elapsed().as_micros());
+
     stopwatch.stop();
     println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
 
@@ -354,7 +385,7 @@ fn get_block_type(block_height: u8, max_collumn_height: u8, water_level: u8, has
 
 }
 
-fn get_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize) -> u8{
+fn get_set_block(set_blocks: &HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize) -> u8{
     let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");
 
     match set_blocks.get(&key){
