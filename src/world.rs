@@ -8,6 +8,7 @@ use self::{block_model::BlockModel, chunk::block};
 use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
+use glm::Vec3;
 use stopwatch::Stopwatch;
 use std::collections::HashMap;
 
@@ -18,6 +19,7 @@ pub struct World {
     pub block_model: BlockModel,
     pub view_distance: f32,
     pub program: render_gl::Program,
+    pub square_chunk_width: usize,
     //Index of i, index of k, check visibility, rebuild the block, rebuilt bool
     pub unbuilt_models: Vec<(usize, usize, bool, bool, bool)>,
     pub set_blocks: HashMap<String, u8>,
@@ -35,8 +37,9 @@ impl World{
             loaded_textures: 0,
             chunk_grid: vec![],
             block_model: block_model::BlockModel::init(),
-            view_distance: ((chunks_layers_from_player - 1) / 2 * square_chunk_width + square_chunk_width) as f32, //+  (square_chunk_width.clone() as f32 * chunks_layers_from_player.clone() as f32) - *chunks_layers_from_player as f32,
+            view_distance: ((chunks_layers_from_player - 1) / 2 * square_chunk_width + square_chunk_width) as f32,
             program: program.clone(),
+            square_chunk_width: square_chunk_width.clone(),
             unbuilt_models: vec![],
             set_blocks: HashMap::new(),
             change_block: vec![],
@@ -54,6 +57,8 @@ impl World{
 
         //BUILD CHUNK MESH 
         build_mesh(&mut world);
+
+
 
         return world;
     }
@@ -96,15 +101,17 @@ impl World{
         
             self.change_block.clear();
             for k in 0..self.unbuilt_models.len(){
-                self.build_mesh.push((self.unbuilt_models[k].0, self.unbuilt_models[k].1));
+                self.build_mesh.push((
+                    self.unbuilt_models[k].0, self.unbuilt_models[k].1));
             }
             self.unbuilt_models.clear();
         }
     }
 
-    pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>){
+    pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>, projection: glm::Matrix4<f32>, view: glm::Matrix4<f32>){
         for i in 0..self.build_mesh.len(){
             build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
+            
         }
         self.build_mesh.clear();
 
@@ -114,24 +121,28 @@ impl World{
         }
 
         let mut change_direction: usize = 0;
+        
+        let frustum = get_frustum(projection*view);
+        // println!("left x:{} y:{} z:{} w:{}", frustum[0].0.x, frustum[0].0.y, frustum[0].0.z, frustum[0].1);
 
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
-                self.program.set_used();
-                let chunk_model = self.chunk_grid[i][k].chunk_model;
-                unsafe{
-                    gl::BindVertexArray(chunk_model.0);
-                    gl::EnableVertexAttribArray(0);
-                    gl::EnableVertexAttribArray(1);
-                    gl::EnableVertexAttribArray(2);
-                    gl::EnableVertexAttribArray(3);
-                    gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
-        
-                    let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
-                    model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
-                    let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                    gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                    gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
+                if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
+                    self.program.set_used();
+                    let chunk_model = self.chunk_grid[i][k].chunk_model;
+                    unsafe{
+                        gl::BindVertexArray(chunk_model.0);
+                        gl::EnableVertexAttribArray(0);
+                        gl::EnableVertexAttribArray(1);
+                        gl::EnableVertexAttribArray(2);
+                        gl::EnableVertexAttribArray(3);
+                        gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
+                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
+                        model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
+                        let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
+                        gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
+                        gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
+                    }
                 }
 
                 if change_direction == 0 && self.unbuilt_models.len() == 0 && self.change_block.len() == 0 && !distance(self.view_distance, &camera_pos, &self.chunk_grid[i][k].position){
@@ -146,21 +157,23 @@ impl World{
         //Seperate render call for partialy transparent objects
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
-                self.program.set_used();
-                let transparent_chunk_model = self.chunk_grid[i][k].transparent_chunk_model;
-                unsafe{
-                    gl::BindVertexArray(transparent_chunk_model.0);
-                    gl::EnableVertexAttribArray(0);
-                    gl::EnableVertexAttribArray(1);
-                    gl::EnableVertexAttribArray(2);
-                    gl::EnableVertexAttribArray(3);
-                    gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
-        
-                    let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
-                    model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
-                    let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                    gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                    gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
+                if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
+                    self.program.set_used();
+                    let transparent_chunk_model = self.chunk_grid[i][k].transparent_chunk_model;
+                    unsafe{
+                        gl::BindVertexArray(transparent_chunk_model.0);
+                        gl::EnableVertexAttribArray(0);
+                        gl::EnableVertexAttribArray(1);
+                        gl::EnableVertexAttribArray(2);
+                        gl::EnableVertexAttribArray(3);
+                        gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
+            
+                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
+                        model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
+                        let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
+                        gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
+                        gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
+                    }
                 }
             }
         }
@@ -414,18 +427,38 @@ impl World{
     }
 }
 
-fn set_blocks(world: &mut World){
-    for i in 0..world.change_block.len(){                
-        world.chunk_grid[world.change_block[i].0][world.change_block[i].1].blocks[world.change_block[i].2][world.change_block[i].3][world.change_block[i].4].id = world.change_block[i].5;
+fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<(glm::Vector3<f32>, f32)>{
+    let mut left: glm::Vector3<f32> = glm::vec3(mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]);
+    // left = left/(glm::builtin::length(left)/2.0);
+    let left_distance = (mat[3][3] + mat[3][0]);///glm::builtin::length(left);
 
-        check_blocks_around_block(world, world.change_block[i].0, world.change_block[i].1, world.change_block[i].2, world.change_block[i].3, world.change_block[i].4);
+    let right: glm::Vector3<f32> = glm::vec3(mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]);
+    let right_distance = (mat[3][3] - mat[3][0]);///glm::builtin::length(right);
+
+    // let mut near: glm::Vector3<f32> = glm::vec3(proj[0][3] + proj[0][2], proj[1][3] + proj[1][2], proj[2][3] + proj[2][2]);
+    // near = near/glm::builtin::length(near);
+    // let near_distance = (proj[3][3] + proj[3][2])/glm::builtin::length(near);
+
+    // let mut far: glm::Vector3<f32> = glm::vec3(proj[0][3] - proj[0][2], proj[1][3] - proj[1][2], proj[2][3] - proj[2][2]);
+    // far = far/glm::builtin::length(far);
+    // let far_distance = (proj[3][3] - proj[3][2])/glm::builtin::length(far);
+
+    let mut plains: Vec<(glm::Vector3<f32>, f32)> = vec![];
+
+    plains.push((right, right_distance));
+    plains.push((left, left_distance));
+    return plains;
+} 
+
+fn chunk_in_frustum(frustum: &Vec<(glm::Vector3<f32>, f32)>, object_position: &glm::Vector3<f32>, radius_of_chunk: f32) -> bool{
+
+    for i in 0..frustum.len(){
+        if  object_position.x*frustum[i].0.x + object_position.y*frustum[i].0.y + object_position.z*frustum[i].0.z + frustum[i].1 + radius_of_chunk <= 0.0{
+            return false;
+        }
     }
 
-    world.change_block.clear();
-    for k in 0..world.unbuilt_models.len(){
-        build_mesh_single(world, world.unbuilt_models[k].0, world.unbuilt_models[k].1);
-    }
-    world.unbuilt_models.clear()
+    return true;
 }
 
 fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: u8){

@@ -4,7 +4,7 @@ use parking_lot::{Mutex, MutexGuard};
 use rand::Rng;
 use rand::rngs::StdRng;
 use rand::{SeedableRng};
-use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
+use noise::{BasicMulti, Blend, Fbm, NoiseFn, RidgedMulti, Seedable, Value, Worley};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use super::{block_model::BlockModel};
 use std::collections::HashMap;
@@ -150,7 +150,6 @@ impl Chunk{
         self.transparent_chunk_model = (0,0,0);
         for j in 0..self.blocks[0][0].len() {
             if self.visible_layers[j]{
-                // println!("Found true");
                 for i in 0..self.blocks.len() {
                     for k in 0..self.blocks[i].len() {
                         block::Block::get_mesh(&self.blocks[i][k][j], &mut self.vertices, block_model);
@@ -159,7 +158,6 @@ impl Chunk{
             }
         }
         stopwatch.stop();
-        // println!("Time for build mesh ms: {}", stopwatch.elapsed_ms());
     }
     
     pub fn populate_mesh(&mut self){
@@ -245,21 +243,31 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
 
     let set_blocks_arc = Arc::new(Mutex::new(set_blocks));
     let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
-    let mut collumns: Vec<Vec<(u8, bool, f32, f32)>> = vec![];
+    let mut collumns: Vec<Vec<(u8, bool, f32, f32, u8)>> = vec![];
 
-    let mut basic_multi = BasicMulti::default().set_seed(60);
-    basic_multi.frequency = 0.1;
+    // let mut basic_multi = BasicMulti::default().set_seed(60);
+    // basic_multi.frequency = 1.0;
 
-    let mut ridged = RidgedMulti::default().set_seed(60);
+    // let mut ridged = RidgedMulti::default().set_seed(60);
     let mut fbm = Fbm::default().set_seed(60);
-    fbm.frequency = 0.01;
-    ridged.attenuation = 7.07;
-    ridged.persistence = 2.02;
-    ridged.octaves = 3;
-    ridged.frequency = 7.01 as f64;
-    basic_multi.frequency = 0.000004 as f64;
-    basic_multi.octaves = 3;
-    let blend = Blend::new(&fbm, &ridged, &basic_multi);
+    let mut worley = Worley::default().set_seed(60);
+    worley.frequency = 0.01;
+    // worley.displacement = 
+    
+    // fbm.frequency = 0.005;
+
+    // fbm.frequency = 0.009;
+    // fbm.lacunarity = 2.0;
+    // fbm.persistence =
+    // fbm.persistence;
+
+    // ridged.attenuation = 7.07;
+    // ridged.persistence = 2.02;
+    // ridged.octaves = 6;
+    // ridged.frequency = 7.01 as f64;
+    // basic_multi.frequency = 0.000004 as f64;
+    // basic_multi.octaves = 3;
+    // let blend = worley;//Blend::new(&fbm, &ridged, &basic_multi);
 
     for i in 0..square_chunk_width{
         collumns.push(vec![]);
@@ -268,11 +276,48 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
             let z = position.z - 1.0 * i as f32;
             let x = position.x - 1.0 * k as f32;
 
-            let value = (blend.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-            let max = map_value(value, 0, mid_height) as u8 + underground_height;
+            let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+            // let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+            // 0 normal 
+            // 1 Ocean
+            // 2 Dessert
+            // 3 Mountains
+        
+            let type_biome: u8; 
+            let max: u8;
+            if value_worley > 0.97{
+                fbm.octaves = 6;
+                fbm.lacunarity = 2.0;
+                fbm.frequency = 0.02;
+                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                max = map_value(value_fbm.powf(1.0), 0, mid_height) as u8 + underground_height;
+                type_biome = 3
+            }else if value_worley > 0.9{
+                fbm.octaves = 4;
+                fbm.frequency = 0.01;
+                fbm.lacunarity = 2.0;
 
+                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                max= map_value(value_fbm.powf(0.5)/2.0, 0, mid_height) as u8 + underground_height;
+                type_biome = 2
+            }else if value_worley > 0.5{
+                fbm.octaves = 5;
+                fbm.frequency = 0.01;
+                fbm.lacunarity = 2.0;
+
+                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                max= map_value(powi(value_fbm,5), 0, mid_height) as u8 + underground_height;
+                type_biome = 6
+            }else {
+                fbm.octaves = 6;
+                fbm.frequency = 0.01;
+                fbm.lacunarity = 2.0;
+
+                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                max= map_value(powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
+                type_biome = 0
+            }
             let mut has_tree = false;
-            // let seed = world_gen_seed as u64 + powi(grid_x as f64 + grid_z as f64 + z as f64 + x as f64, 2).sqrt() as u64 + max as u64
             let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
             if rng.gen_range(1..50) == 1{
                 has_tree = true;
@@ -281,7 +326,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 }
             }
 
-            collumns[i].push((max, has_tree, z, x));
+            collumns[i].push((max, has_tree, z, x, type_biome));
         }
     }
     let collumns = Arc::new(Mutex::new(&collumns));
@@ -312,34 +357,22 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
             for j in 0..val[k].len(){    
                 let mut number: u8;
 
-
-                // if k == square_chunk_width as usize -1 && i == square_chunk_width as usize -1 {
-                //     number = 0;
-                // }else if k == square_chunk_width as usize -1 || k == 0 || i == 0 || i == square_chunk_width as usize -1 {
-                //     number = 1;
-                // }else{
-                //     number = 2;
-                // }
-
                 number = get_set_block(&set_blocks_t, grid_x, grid_z, i, k, j);
                 if number == 7{
                     remove_key(&mut set_blocks_arc_t.lock(), grid_x, grid_z, i, k, j);
                 }
                 if number == 241{
-                    number = get_block_type(j as u8, underground_height + collumn_values.0, water_level, collumn_values.1, underground_height, sky_height, mid_height + underground_height + sky_height);
+                    number = get_block_type(j as u8, underground_height + collumn_values.0, water_level, collumn_values.1, underground_height, sky_height, mid_height + underground_height + sky_height, collumn_values.4);
                 }
                 
                 val[k as usize][j as usize].regenerate(glm::vec3(collumn_values.3, position.y + 1.0 * j as f32, collumn_values.2), number);
             }
         }
     });
-    
 
     for i in 0..trees.len(){
         set_tree(change_block, chunk_i, chunk_k, blocks, &mut set_blocks_arc.lock(), trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, chunk_distance, (mid_height + underground_height + sky_height) as usize);
     }
-    // let now = Instant::now();
-    // println!("ns {} for tree build", now.elapsed().as_micros());
 
     stopwatch.stop();
     println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
@@ -347,42 +380,72 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     return blocks[blocks.len()-1][blocks[blocks.len()-1].len()-1][0].position.clone();
 }
 
-fn get_block_type(block_height: u8, max_collumn_height: u8, water_level: u8, has_plant: bool, underground_height: u8, sky_height: u8, height_limit: u8) -> u8 {
-    
-    if block_height < underground_height {
-        return 2;
-    }
-
-    if has_plant && block_height > water_level && water_level < max_collumn_height && block_height < max_collumn_height + 6 && block_height > max_collumn_height {
-        return 5; // Wood log
-    }
-    
-    if block_height > max_collumn_height {
-        if block_height < water_level{
-            return 3;//block_id = 3; //Water
-        }else{
-            return 240;// AIR
+fn get_block_type(block_height: u8, max_collumn_height: u8, water_level: u8, has_plant: bool, underground_height: u8, sky_height: u8, height_limit: u8, biome: u8) -> u8 {
+    if biome == 2{
+        //Check if the collumn has a plant, j is above water, the max height of the collumn is 2 blocks above water. J is up to 6 blocks bellow max collumn height and that j is aboce max collumn height
+        if has_plant && block_height > water_level && water_level + 2 < max_collumn_height && block_height < max_collumn_height + 6 && block_height > max_collumn_height {
+            return 5; // Wood log
         }
-    }
-    
-    if block_height <= 7 {
-        return 1; // Dirt
-    }
 
-    if block_height == max_collumn_height {
-        if block_height > water_level + 2{
-            return 0; //Grass
-        }else{
+        //Check if the j value is below undeground height. Everything underground is stone
+        if block_height < underground_height {
+            return 1;//Stone
+        }
+        
+        //Check if j above collumn max
+        if block_height > max_collumn_height {
+            //Check if j is bellow water
+            if block_height < water_level{
+                return 3;//Water
+            }else{
+                return 240;// AIR
+            }
+        }
+
+        if block_height == max_collumn_height {
             return 6; //Sand
         }
-    }
-    
-    if block_height >= 8  {
-        return 2; //Stone
-    }  else {
-        return 240; //AIR
-    }
 
+        if max_collumn_height - block_height < 3 && block_height > water_level + 2{
+            return 6; //Sand
+        }
+
+        return 1; // Stone
+    }else{
+        //Check if the collumn has a plant, j is above water, the max height of the collumn is 2 blocks above water. J is up to 6 blocks bellow max collumn height and that j is aboce max collumn height
+        if has_plant && block_height > water_level && water_level + 2 < max_collumn_height && block_height < max_collumn_height + 6 && block_height > max_collumn_height {
+            return 5; // Wood log
+        }
+
+        //Check if the j value is below undeground height. Everything underground is stone
+        if block_height < underground_height {
+            return 1;//Stone
+        }
+        
+        //Check if j above collumn max
+        if block_height > max_collumn_height {
+            //Check if j is bellow water
+            if block_height < water_level{
+                return 3;//Water
+            }else{
+                return 240;// AIR
+            }
+        }
+
+        if block_height == max_collumn_height {
+            if block_height > water_level + 2{
+                return 0; //Grass
+            }else{
+                return 6; //Sand
+            }
+        }
+
+        if max_collumn_height - block_height < 3 && block_height > water_level + 2{
+            return 2; // Dirt bellow grass
+        }
+
+        return 1; // Stone
+    }
 }
 
 fn get_set_block(set_blocks: &HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize) -> u8{
@@ -542,3 +605,4 @@ fn set_tree_block(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
         }
     }
 }
+

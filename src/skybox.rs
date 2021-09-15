@@ -56,12 +56,12 @@ impl Skybox{
         ];
 
         let faces: Vec<String> = vec![ 
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posx.jpg".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negx.jpg".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posy.jpg".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negy.jpg".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posz.jpg".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negz.jpg".to_string()
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posx.png".to_string(),
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negx.png".to_string(),
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posy.png".to_string(),
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negy.png".to_string(),
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posz.png".to_string(),
+            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negz.png".to_string()
         ];
         
 
