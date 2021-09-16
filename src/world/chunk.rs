@@ -243,93 +243,245 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
 
     let set_blocks_arc = Arc::new(Mutex::new(set_blocks));
     let mut trees: Vec<(i32, i32, usize, usize, usize)> = vec![];
+
     let mut collumns: Vec<Vec<(u8, bool, f32, f32, u8)>> = vec![];
 
-    // let mut basic_multi = BasicMulti::default().set_seed(60);
-    // basic_multi.frequency = 1.0;
-
-    // let mut ridged = RidgedMulti::default().set_seed(60);
     let mut fbm = Fbm::default().set_seed(60);
     let mut worley = Worley::default().set_seed(60);
     worley.frequency = 0.01;
-    // worley.displacement = 
+
     
-    // fbm.frequency = 0.005;
-
-    // fbm.frequency = 0.009;
-    // fbm.lacunarity = 2.0;
-    // fbm.persistence =
-    // fbm.persistence;
-
-    // ridged.attenuation = 7.07;
-    // ridged.persistence = 2.02;
-    // ridged.octaves = 6;
-    // ridged.frequency = 7.01 as f64;
-    // basic_multi.frequency = 0.000004 as f64;
-    // basic_multi.octaves = 3;
-    // let blend = worley;//Blend::new(&fbm, &ridged, &basic_multi);
-
+    //Seed with values that will be used for biliniare interpolation
     for i in 0..square_chunk_width{
         collumns.push(vec![]);
-
         for k in 0..square_chunk_width {
-            let z = position.z - 1.0 * i as f32;
-            let x = position.x - 1.0 * k as f32;
-
-            let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-            // let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-            // 0 normal 
-            // 1 Ocean
-            // 2 Dessert
-            // 3 Mountains
-        
-            let type_biome: u8; 
-            let max: u8;
-            if value_worley > 0.97{
-                fbm.octaves = 6;
-                fbm.lacunarity = 2.0;
-                fbm.frequency = 0.02;
-                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                max = map_value(value_fbm.powf(1.0), 0, mid_height) as u8 + underground_height;
-                type_biome = 3
-            }else if value_worley > 0.9{
-                fbm.octaves = 4;
-                fbm.frequency = 0.01;
-                fbm.lacunarity = 2.0;
-
-                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                max= map_value(value_fbm.powf(0.5)/2.0, 0, mid_height) as u8 + underground_height;
-                type_biome = 2
-            }else if value_worley > 0.5{
-                fbm.octaves = 5;
-                fbm.frequency = 0.01;
-                fbm.lacunarity = 2.0;
-
-                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                max= map_value(powi(value_fbm,5), 0, mid_height) as u8 + underground_height;
-                type_biome = 6
-            }else {
-                fbm.octaves = 6;
-                fbm.frequency = 0.01;
-                fbm.lacunarity = 2.0;
-
-                let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                max= map_value(powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
-                type_biome = 0
-            }
-            let mut has_tree = false;
-            let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
-            if rng.gen_range(1..50) == 1{
-                has_tree = true;
-                if max > water_level+2{
-                    trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
+            if i == 0 && k == 0 || i == 0 && k == square_chunk_width-1 || i == square_chunk_width-1 && k == 0  || i == square_chunk_width-1 && k == square_chunk_width-1{
+                let z = position.z - 1.0 * i as f32;
+                let x = position.x - 1.0 * k as f32;
+                
+                let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                // 0 normal 
+                // 1 Ocean
+                // 2 Dessert
+                // 3 Mountains
+            
+                let type_biome: u8; 
+                let max: u8;
+                {
+                    if value_worley > 0.97{
+                        fbm.octaves = 6;
+                        fbm.lacunarity = 2.0;
+                        fbm.frequency = 0.02;
+                        let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                        max = map_value(value_fbm.powf(1.0), 0, mid_height) as u8 + underground_height;
+                        type_biome = 3
+                    }else if value_worley > 0.9{
+                        fbm.octaves = 4;
+                        fbm.frequency = 0.01;
+                        fbm.lacunarity = 2.0;
+    
+                        let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                        max= map_value(value_fbm.powf(0.5)/2.0, 0, mid_height) as u8 + underground_height;
+                        type_biome = 2
+                    }else if value_worley > 0.5{
+                        fbm.octaves = 5;
+                        fbm.frequency = 0.01;
+                        fbm.lacunarity = 2.0;
+    
+                        let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                        max= map_value(powi(value_fbm,5), 0, mid_height) as u8 + underground_height;
+                        type_biome = 6
+                    }else {
+                        fbm.octaves = 6;
+                        fbm.frequency = 0.01;
+                        fbm.lacunarity = 2.0;
+    
+                        let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                        max= map_value(powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
+                        type_biome = 0
+                    }
                 }
+                let mut has_tree = false;
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
+                if rng.gen_range(1..50) == 1{
+                    has_tree = true;
+                    if max > water_level+2{
+                        trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
+                    }
+                }
+                collumns[i].push((max, has_tree, z, x, type_biome));
+            }else{
+                collumns[i].push((0, false, 0.0, 0.0, 0));
             }
-
-            collumns[i].push((max, has_tree, z, x, type_biome));
+            // for k in 0..collumns[i].len() {
+            //     print!("({} i:{} k:{})",collumns[i][k].0, i, k);
+            // }
+            // println!("");
         }
     }
+    // for i in 0..square_chunk_width{
+    //     for k in 0..collumns[i].len() {
+    //         print!("({} i:{} k:{})",collumns[i][k].0, i, k);
+    //     }
+    //     println!("");
+    // }
+
+    let coll_temp = collumns.clone();
+
+    for i in 0..square_chunk_width{
+        if collumns[i][0].0 == 0{
+            continue;
+        }
+        for k in 0..square_chunk_width {
+            // println!("selected: {} i: {} k: {}", coll_temp[i][k].0, i, k);
+            if collumns[i][k].0 == 0{
+                let z = position.z - 1.0 * i as f32;
+                let x = position.x - 1.0 * k as f32;
+                
+                let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                // 0 normal 
+                // 1 Ocean
+                // 2 Dessert
+                // 3 Mountains
+            
+                let type_biome: u8; 
+                //Walk in direction of +k 
+                let mut next_distance: f32 = 0.0;
+                let mut next_height: f32 = 0.0;
+                for j in k+1..square_chunk_width{
+                    // println!("height: {} i: {} j: {}", coll_temp[i][j].0, i, j);
+                    if coll_temp[i][j].0 != 0{
+                        next_distance = (j - k) as f32 + 1.0;
+                        next_height = coll_temp[i][j].0 as f32;
+                        break;
+                    }
+                }
+                let mut before_distance: f32 = 0.0;
+                let mut before_height: f32 = 0.0;
+                for j in (0..k).rev(){
+                    // println!("height: {} i: {} j: {}", coll_temp[i][j].0, i, j);
+                    if coll_temp[i][j].0 != 0{
+                        before_distance = (k - j) as f32;
+                        before_height = coll_temp[i][j].0 as f32;
+                        break;
+                    }
+                }
+
+                let max: u8 = (next_height * (before_distance/(before_distance+next_distance)) + before_height * (next_distance/(before_distance+next_distance))).round() as u8;
+
+                if value_worley > 0.97{
+                    type_biome = 3
+                }else if value_worley > 0.9{
+                    type_biome = 2
+                }else if value_worley > 0.5{
+                    type_biome = 6
+                }else {
+                    type_biome = 0
+                }
+                let mut has_tree = false;
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
+                if rng.gen_range(1..50) == 1{
+                    has_tree = true;
+                    if max > water_level+2{
+                        trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
+                    }
+                }
+                collumns[i][k] = (max, has_tree, z, x, type_biome);
+            }
+
+        }
+    }
+    // for i in 0..square_chunk_width {
+    //     for k in 0..collumns[i].len() {
+    //         print!("({})",collumns[i][k].0);
+    //     }
+    //     println!("");
+
+    // }
+    let coll_temp = collumns.clone();
+
+    for k in 0..square_chunk_width{
+        for i in 0..square_chunk_width {
+            // println!("selected: {} i: {} k: {}", coll_temp[i][k].0, i, k);
+            if coll_temp[i][k].0 == 0{
+                let z = position.z - 1.0 * i as f32;
+                let x = position.x - 1.0 * k as f32;
+                
+                let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
+                // 0 normal 
+                // 1 Ocean
+                // 2 Dessert
+                // 3 Mountains
+            
+                let type_biome: u8; 
+                //Walk in direction of +k 
+                let mut next_distance: f32 = 0.0;
+                let mut next_height: f32 = 0.0;
+                for j in i+1..square_chunk_width{
+                    // println!("height: {} j: {} k: {}", coll_temp[j][k].0, j, k);
+                    if coll_temp[j][k].0 != 0{
+                        // println!("i:{}",i);
+                        next_distance = (j - i) as f32 +1.0;
+                        // println!("next_distance:{}",next_distance);
+                        next_height = coll_temp[j][k].0 as f32;
+                        break;
+                    }
+                }
+                let mut before_distance: f32 = 0.0;
+                let mut before_height: f32 = 0.0;
+                for j in (0..i).rev(){
+                    // println!("height: {} j: {} k: {}", coll_temp[j][k].0, j, k);
+                    if coll_temp[j][k].0 != 0{
+                        // println!("i:{}",i);
+                        // println!("j:{}",j);
+
+                        before_distance = (i - j) as f32;
+                        // println!("before_distance:{}",before_distance);
+                        before_height = coll_temp[j][k].0 as f32;
+                        break;
+                    }
+                }
+                // println!("before_height:{}",before_height);
+                // println!("next_height:{}",next_height);
+
+                // println!("before {}",before_height * (next_distance/(before_distance+next_distance)));
+                // println!("next {}",next_height * (before_distance/(before_distance+next_distance)));
+
+
+                let max: u8 = (next_height * (before_distance/(before_distance+next_distance)) + before_height * (next_distance/(before_distance+next_distance))).round() as u8;
+                // println!("{}",max);
+                if value_worley > 0.97{
+                    type_biome = 3
+                }else if value_worley > 0.9{
+                    type_biome = 2
+                }else if value_worley > 0.5{
+                    type_biome = 6
+                }else {
+                    type_biome = 0
+                }
+                let mut has_tree = false;
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
+                if rng.gen_range(1..50) == 1{
+                    has_tree = true;
+                    if max > water_level+2{
+                        trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
+                    }
+                }
+                collumns[i][k] = (max, has_tree, z, x, type_biome);
+            }
+        }
+    }
+
+    // for i in 0..square_chunk_width {
+    //     for k in 0..collumns[i].len() {
+    //         print!("({})",collumns[i][k].0);
+    //     }
+    //     println!("");
+
+    // }
+
     let collumns = Arc::new(Mutex::new(&collumns));
+    // println!("ms {}", stopwatch.elapsed_ms());
 
 
     if !overwrite { 
@@ -375,7 +527,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     }
 
     stopwatch.stop();
-    println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
+    // println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
 
     return blocks[blocks.len()-1][blocks[blocks.len()-1].len()-1][0].position.clone();
 }
