@@ -12,11 +12,11 @@ use std::ffi::CString;
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
-    const WINDOW_WIDTH: u32 = 1920;
-    const WINDOW_HEIGHT: u32 = 1080;
+    const WINDOW_WIDTH: u32 = 1280;
+    const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 10;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 31;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
