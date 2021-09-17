@@ -70,3 +70,11 @@ Added trees with leaves. Added more interesting terrain that has more diversity 
 ![image](https://user-images.githubusercontent.com/50622827/128577982-37897d50-e816-4024-8b1a-3f00054fe0fb.png)
 
 From here the project will mainly have performance tweaks and bug fixes. Unless some features come to my mind and i have the time to implement them. Thank you for reading.
+
+# 17-09-2021 
+
+The game now has way less bugs. There are still a lot of very small bugs though. Added biomes. Added frustum culling to improve performance. Added threading when building chunks. Added bilinear interpolation between chunk blocks, may be replaced by bicubic later. A lot of smaller things got added that i dont remember. 
+
+![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
+
+Im donne adding things for now. The game of mine is a bit less performance efficient than similar projects but that is ok for me. I feel like the game is a sligtly enchanced version of the classic minecraft that was on the minecrat.net website in 2011. It has been a very fun project. I will probably come back in a year to put some more imporvements to gameplay on it, small things.
