@@ -8,8 +8,6 @@ use self::{block_model::BlockModel, chunk::block};
 use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
-use glm::Vec3;
-use stopwatch::Stopwatch;
 use std::collections::HashMap;
 
 pub struct World {
@@ -31,7 +29,7 @@ pub struct World {
 
 impl World{
 
-    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, view_distance: &f32, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8, noise_resolution: &f32) -> World{
+    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
             loaded_textures: 0,
@@ -50,7 +48,7 @@ impl World{
         setup_texture(&mut world);
         
         //LOAD CHUNKS AROUND PLAYER
-        generate_chunks(&mut world.chunk_grid, &mut world.change_block, camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height, noise_resolution);
+        generate_chunks(&mut world.chunk_grid, &mut world.change_block, camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height);
 
         //CHECK CHUNK VISIBILITY 
         check_visibility(&mut world);
@@ -428,20 +426,11 @@ impl World{
 }
 
 fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<(glm::Vector3<f32>, f32)>{
-    let mut left: glm::Vector3<f32> = glm::vec3(mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]);
-    // left = left/(glm::builtin::length(left)/2.0);
-    let left_distance = (mat[3][3] + mat[3][0]);///glm::builtin::length(left);
+    let left: glm::Vector3<f32> = glm::vec3(mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]);
+    let left_distance = mat[3][3] + mat[3][0];
 
     let right: glm::Vector3<f32> = glm::vec3(mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]);
-    let right_distance = (mat[3][3] - mat[3][0]);///glm::builtin::length(right);
-
-    // let mut near: glm::Vector3<f32> = glm::vec3(proj[0][3] + proj[0][2], proj[1][3] + proj[1][2], proj[2][3] + proj[2][2]);
-    // near = near/glm::builtin::length(near);
-    // let near_distance = (proj[3][3] + proj[3][2])/glm::builtin::length(near);
-
-    // let mut far: glm::Vector3<f32> = glm::vec3(proj[0][3] - proj[0][2], proj[1][3] - proj[1][2], proj[2][3] - proj[2][2]);
-    // far = far/glm::builtin::length(far);
-    // let far_distance = (proj[3][3] - proj[3][2])/glm::builtin::length(far);
+    let right_distance = mat[3][3] - mat[3][0];
 
     let mut plains: Vec<(glm::Vector3<f32>, f32)> = vec![];
 
@@ -650,7 +639,7 @@ fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f
 }
 
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, noise_resolution: &f32){
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
     let mut x_pos = camera_position.x + adjustment;
     let mut z_pos = camera_position.z + adjustment;
@@ -667,7 +656,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usi
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_width{  //X line Go from positive to negative
-            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, noise_resolution, chunk_width);
+            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, chunk_width);
             chunk_grid[i].push(chunk);
             x_pos -= *square_chunk_width as f32;
         }
@@ -716,7 +705,7 @@ fn get_direction(point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32>) -> usiz
 
 fn setup_texture(world: &mut World) {
 
-    let data = image::open(&std::path::Path::new("C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\TextureTemplate.png")).unwrap().into_rgba8();
+    let data = image::open(&std::path::Path::new("resources\\TextureTemplate.png")).unwrap().into_rgba8();
     let mut texture: gl::types::GLuint = 0;
     
     unsafe {
@@ -761,7 +750,7 @@ fn check_visibility(world: &mut World){
 fn check_chunk_visibility(world: &mut World, i: usize, k: usize){
     let mut layer_visibility: Vec<bool> = vec![];
 
-    for i in 0..world.chunk_grid[i][k].blocks[0][0].len(){
+    for _i in 0..world.chunk_grid[i][k].blocks[0][0].len(){
         layer_visibility.push(false);
     }
 

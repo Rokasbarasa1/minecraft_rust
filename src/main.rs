@@ -8,30 +8,21 @@ pub mod world;
 pub mod player;
 pub mod skybox; 
 use std::ffi::CString;
-use std::sync::{Arc};
-use std::thread;
-use noise::{Blend, NoiseFn, RidgedMulti, Seedable, BasicMulti, Value, Fbm};
-use parking_lot::{Mutex, MutexGuard};
-
-use std::fs::File;
-use std::io::{Write};
 
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
-    const WINDOW_WIDTH: u32 = 1280;
-    const WINDOW_HEIGHT: u32 = 720;
+    const WINDOW_WIDTH: u32 = 1920;
+    const WINDOW_HEIGHT: u32 = 1080;
     
-    const SQUARE_CHUNK_WIDTH: usize = 6;           //16;
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 17;    //Odd numbers ONLYYY
-    const VIEW_DISTANCE: f32 = 200.0;               
+    const SQUARE_CHUNK_WIDTH: usize = 10;           //Values can be: 4,6,10,16,22,28
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
     const MID_HEIGHT: u8 = 50;                   //The terrain variation part
     const SKY_HEIGHT: u8 = 0;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
     const UNDERGROUND_HEIGHT: u8 = 0;            
-    const NOISE_RESOLUTION: f32 = 0.019;            //Zoom in - more resolution. Higher - Zoom out
 
 
     let sdl = sdl2::init().unwrap();
@@ -55,12 +46,13 @@ fn main() {
     // set up block shader
     let vert_shader = render_gl::Shader::from_vert_source(&CString::new(include_str!("shaders/block.vert")).unwrap()).unwrap();
     let frag_shader = render_gl::Shader::from_frag_source(&CString::new(include_str!("shaders/block.frag")).unwrap()).unwrap();
-    let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
+    let shader_program = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
     // setup skybox shader
     let vert_shader = render_gl::Shader::from_vert_source(&CString::new(include_str!("shaders/skybox.vert")).unwrap()).unwrap();
     let frag_shader = render_gl::Shader::from_frag_source(&CString::new(include_str!("shaders/skybox.frag")).unwrap()).unwrap();
-    let skybox_shader = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();    
+    let skybox_shader = render_gl::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
+
     unsafe {
         gl::Viewport(0, 0, WINDOW_WIDTH as i32, WINDOW_HEIGHT as i32);
         gl::ClearColor(0.67, 0.79, 1.0, 1.0); // Divide 120 by 255 and you get the color you want. Replace 120 with what you have in rgb.
@@ -77,12 +69,10 @@ fn main() {
         &shader_program, 
         &SQUARE_CHUNK_WIDTH, 
         &CHUNKS_LAYERS_FROM_PLAYER, 
-        &VIEW_DISTANCE, 
         &WORLD_GEN_SEED,
         &MID_HEIGHT,
         &UNDERGROUND_HEIGHT,
         &SKY_HEIGHT,
-        &NOISE_RESOLUTION,
     );
     
     let mut player: player::Player = player::Player::new(&mut world, PLAYER_HEIGHT, camera_pos);
@@ -151,25 +141,6 @@ fn main() {
         }
         time_increment += 0.02;
         window.gl_swap_window();
-        {
-            // println!("Position: X:{} Z:{}", player.camera_pos.x, player.camera_pos.z);
-
-            // let x_axis = f32::abs(player.camera_front.x);
-            // let y_axis = f32::abs(player.camera_front.y);
-            // let z_axis = f32::abs(player.camera_front.z);
-            // let x_sign = if player.camera_front.x > 0.0 {"+"} else {"-"};
-            // let y_sign = if player.camera_front.y > 0.0 {"+"} else {"-"};
-            // let z_sign = if player.camera_front.z > 0.0 {"+"} else {"-"};
-
-            // if x_axis > y_axis && x_axis > z_axis {
-            //     println!("Axis: {}X",x_sign);
-            // }else if y_axis > x_axis && y_axis > z_axis {
-            //     println!("Axis: {}Y",y_sign);
-            // }else if z_axis > y_axis && z_axis > x_axis {
-            //     println!("Axis: {}Z",z_sign);
-            // }
-        }
-        // println!("Render ms {}", stopwatch.elapsed_ms());
         
         loop{
             if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
@@ -178,8 +149,5 @@ fn main() {
                 break;
             }
         }
-            // if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
-            //     std::thread::sleep(std::time::Duration::from_millis(TIME_BETWEEN_FRAMES - stopwatch.elapsed_ms() as u64));
-            // }
     }
 }

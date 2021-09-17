@@ -4,9 +4,7 @@ use std::{ffi::c_void};
 pub struct Skybox {
     program: render_gl::Program,
     texture_id: gl::types::GLuint,
-    skybox_vao: gl::types::GLuint,
-    skybox_vbo: gl::types::GLuint,
-    vertices: Vec<f32>
+    skybox_vao: gl::types::GLuint
 }
 
 impl Skybox{
@@ -56,12 +54,12 @@ impl Skybox{
         ];
 
         let faces: Vec<String> = vec![ 
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posx.png".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negx.png".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posy.png".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negy.png".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\posz.png".to_string(),
-            "C:\\Users\\Rokas\\Desktop\\rust_minecraft\\minecraft_rust\\resources\\negz.png".to_string()
+            "resources\\sides.png".to_string(),
+            "resources\\sides.png".to_string(),
+            "resources\\posy.png".to_string(),
+            "resources\\negy.png".to_string(),
+            "resources\\sides.png".to_string(),
+            "resources\\sides.png".to_string()
         ];
         
 
@@ -87,9 +85,7 @@ impl Skybox{
         let skybox = Skybox{
             program: program,
             texture_id: texture_id,
-            skybox_vao: skybox_vao,
-            skybox_vbo: skybox_vbo,
-            vertices: skybox_vertices,
+            skybox_vao: skybox_vao
         };
         return skybox;
     }
