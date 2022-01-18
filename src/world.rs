@@ -62,7 +62,78 @@ impl World{
     }
 
     //  Make the chunk grid as a variables with ARC<> and then copy the thing when you use it i guess 
-    pub fn render_loop(&mut self){
+    pub fn render_loop(&mut self, camera_position: &glm::Vector3<f32>){
+        // If there are chunks to build continue
+        // if self.unbuilt_models.len() != 0 {
+            
+        //     let mut min_dist_first: f32 = -1.0;
+        //     let mut min_dist_second: f32 = -1.0;
+
+        //     let mut index_min_first: i32 = -1;
+        //     let mut index_min_second: i32 = -1;
+
+        //     // Find the 2 chunks that need rebuilding and are closest to the player
+        //     for i in 0..self.unbuilt_models.len(){
+                
+        //         if self.unbuilt_models[i].3 && !self.unbuilt_models[i].4{
+        //             let chunk: &Chunk = &self.chunk_grid[self.unbuilt_models[i].0][self.unbuilt_models[i].1];
+
+        //             let distance = (f32::powi(camera_position.x.clone() - chunk.position.x.clone(), 2) - f32::powi(camera_position.x.clone() - chunk.position.x.clone(), 2)).sqrt();
+                    
+        //             if distance > min_dist_first{
+        //                 min_dist_first = distance;
+        //                 index_min_first = i as i32;
+        //             }else if distance > min_dist_second{
+        //                 min_dist_second = distance;
+        //                 index_min_second = i as i32;
+        //             }
+        //         }
+        //     }
+
+        //     // Regenerate the first and second chunks
+        //     if min_dist_first >= 0.0 && index_min_first >= 0{
+
+        //         self.chunk_grid
+        //         [self.unbuilt_models[index_min_first as usize].0]
+        //         [self.unbuilt_models[index_min_first as usize].1]
+        //         .regenerate(
+        //             &mut self.change_block, 
+        //             self.unbuilt_models[index_min_first as usize].0, 
+        //             self.unbuilt_models[index_min_first as usize].1, 
+        //             &mut self.set_blocks);
+                    
+        //         self.unbuilt_models[index_min_first as usize].4 = true;
+                
+        //         if self.unbuilt_models[index_min_first as usize].2{
+        //             check_chunk_visibility(self, self.unbuilt_models[index_min_first as usize].0, self.unbuilt_models[0].1);
+        //         }
+                
+        //         self.build_mesh.push((self.unbuilt_models[index_min_first as usize].0, self.unbuilt_models[index_min_first as usize].1));
+        //         self.unbuilt_models.remove(index_min_first as usize);
+
+        //         if min_dist_second >= 0.0 && index_min_second >= 0{
+        //             self.chunk_grid
+        //             [self.unbuilt_models[index_min_second as usize].0]
+        //             [self.unbuilt_models[index_min_second as usize].1]
+        //             .regenerate(
+        //                 &mut self.change_block, 
+        //                 self.unbuilt_models[index_min_second as usize].0, 
+        //                 self.unbuilt_models[index_min_second as usize].1, 
+        //                 &mut self.set_blocks);
+
+        //             self.unbuilt_models[index_min_second as usize].4 = true;
+        //         }
+        //     }else {
+
+        //         if self.unbuilt_models[0].2{
+        //             check_chunk_visibility(self, self.unbuilt_models[0].0, self.unbuilt_models[0].1);
+        //         }
+
+        //         self.build_mesh.push((self.unbuilt_models[0].0, self.unbuilt_models[0].1));
+        //         self.unbuilt_models.remove(0);
+        //     }
+        // }
+
         if self.unbuilt_models.len() != 0 {
             // println!("Thead unbuilt");
 
@@ -96,22 +167,25 @@ impl World{
                 self.chunk_grid[self.change_block[i].0][self.change_block[i].1].blocks[self.change_block[i].2][self.change_block[i].3][self.change_block[i].4].id = self.change_block[i].5;
                 check_blocks_around_block(self, self.change_block[i].0, self.change_block[i].1, self.change_block[i].2, self.change_block[i].3, self.change_block[i].4);
             }
-        
             self.change_block.clear();
+
             for k in 0..self.unbuilt_models.len(){
-                self.build_mesh.push((
-                    self.unbuilt_models[k].0, self.unbuilt_models[k].1));
+                self.build_mesh.push((self.unbuilt_models[k].0, self.unbuilt_models[k].1));
             }
             self.unbuilt_models.clear();
         }
     }
 
     pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>, projection: glm::Matrix4<f32>, view: glm::Matrix4<f32>){
-        for i in 0..self.build_mesh.len(){
-            build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
-            
+        // for i in 0..self.build_mesh.len(){
+        //     build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
+        // }
+        if self.build_mesh.len() > 0{
+            build_mesh_single(self, self.build_mesh[0].0, self.build_mesh[0].1);
+            self.build_mesh.remove(0);
         }
-        self.build_mesh.clear();
+        
+        // self.build_mesh.clear();
 
         self.program.set_used();
         unsafe {

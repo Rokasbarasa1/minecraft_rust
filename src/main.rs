@@ -16,7 +16,7 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 10;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 31;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 11;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
@@ -144,7 +144,7 @@ fn main() {
         
         loop{
             if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
-                world.render_loop();
+                world.render_loop(&camera_pos);
             }else{
                 break;
             }
