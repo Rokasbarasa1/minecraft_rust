@@ -1,6 +1,8 @@
 use crate::world;
 
 extern crate glm;
+use winit::event_loop::EventLoop;
+use winit::event::{DeviceEvent, Event, MouseButton, VirtualKeyCode, WindowEvent};
 
 pub struct Player {
     pub camera_pos: glm::Vector3<f32>,
@@ -41,11 +43,12 @@ pub struct Player {
     pub liquid_speed_modifyer: f32,
     pub in_liquid: bool,
     pub margin_for_player: f32,
+    pub event_loop: EventLoop<()>
 
 }
 
 impl Player{
-    pub fn new(world: &mut world::World, player_height: f32, camera_pos: glm::Vector3<f32> ) -> Player {
+    pub fn new(world: &mut world::World, player_height: f32, camera_pos: glm::Vector3<f32>, event_loop: EventLoop<()>) -> Player {
         let mut player = Player{
             camera_pos: camera_pos,
             camera_front: glm::vec3(0.0, 0.0, -1.0),
@@ -84,6 +87,7 @@ impl Player{
             liquid_speed_modifyer: 1.0,
             in_liquid: false,
             margin_for_player: 0.25,
+            event_loop: event_loop
 
         };
 
@@ -92,187 +96,269 @@ impl Player{
         return player;
     }
 
-    pub fn handle_events(&mut self, world: &mut world::World, event_pump: &mut sdl2::EventPump) -> bool{
+    pub fn handle_events(&mut self, world: &mut world::World) -> bool{
         let mut close_game = false;
-        
-        for event in event_pump.poll_iter() {
+        let mut mesh = self.mesh;
+        self.event_loop.run(move |event, _, control_flow| {
+            println!("Hello there");
             match event {
-                sdl2::event::Event::Quit { .. } => close_game = true, 
-                sdl2::event::Event::KeyDown { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    //Change to polygon mesh mode
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Escape {
-                        close_game = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Q {
-                        unsafe {
-                            if !self.mesh {
-                                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-                                self.mesh = true;
-                            } else{
-                                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-                                self.mesh = false;
+                Event::WindowEvent { 
+                    window_id, 
+                    event: WindowEvent::KeyboardInput { device_id, input, is_synthetic }
+                } =>{
+                    match input.state{
+                        Pressed => {
+                            match input.virtual_keycode{
+                                Some(VirtualKeyCode::Escape) =>{
+                                    close_game = true;
+                                },
+                                Some(VirtualKeyCode::Q) =>{
+                                    unsafe {
+                                        if !mesh {
+                                            gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+                                            mesh = true;
+                                        } else{
+                                            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+                                            mesh = false;
+                                        }
+                                    }
+                                },
+                                Some(VirtualKeyCode::E) =>{
+                                    if !self.flying {
+                                        self.flying = true;
+                                    } else{
+                                        self.flying = false;
+                                        self.keyboard_ctrl = true;
+                                    }
+                                },
+                                Some(VirtualKeyCode::Space) =>{
+                                    if !self.flying{
+                                        if self.in_liquid{
+                                            self.keyboard_space = true;
+                                            self.touched_ground = false;
+                                            self.keyboard_ctrl = false;
+                                        }
+                                        
+                                        if self.touched_ground && !self.in_liquid{
+                                            self.keyboard_space = true;
+                                            self.keyboard_ctrl = false;
+                                            self.touched_ground = false;
+                                            self.acceleration_result = 1.5
+                                        }
+                                    }else{
+                                        self.keyboard_space = true;
+                                    }
+                                },
+                                Some(VirtualKeyCode::LControl) =>{
+                                    if self.flying{
+                                        self.keyboard_ctrl = true;
+                                    }
+                                },
+                                Some(VirtualKeyCode::W) =>{
+                                    self.keyboard_w = true;
+                                },
+                                Some(VirtualKeyCode::A) =>{
+                                    self.keyboard_s = true;
+                                },
+                                Some(VirtualKeyCode::S) =>{
+                                    self.keyboard_a = true;
+                                },
+                                Some(VirtualKeyCode::Down) =>{
+                                    self.keyboard_d = true;
+                                },
+                                Some(VirtualKeyCode::F) =>{
+                                    // world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
+                                },
+                                Some(VirtualKeyCode::Key1) =>{
+                                    self.selected_block = 0;
+                                },
+                                Some(VirtualKeyCode::Key2) =>{
+                                    self.selected_block = 1;
+                                },
+                                Some(VirtualKeyCode::Key3) =>{
+                                    self.selected_block = 2;
+                                },
+                                Some(VirtualKeyCode::Key4) =>{
+                                    self.selected_block = 3;
+                                },
+                                Some(VirtualKeyCode::Key5) =>{
+                                    self.selected_block = 4;
+                                },
+                                Some(VirtualKeyCode::Key6) =>{
+                                    self.selected_block = 5;
+                                },
+                                Some(VirtualKeyCode::Key7) =>{
+                                    self.selected_block = 6;
+                                },
+                                _ =>{
+                                    println!("Hello there")
+                                }
+                            }
+                        },
+                        Released => {
+                            match input.virtual_keycode {
+                                Some(VirtualKeyCode::W) =>{
+                                    self.keyboard_w = false;
+                                },
+                                Some(VirtualKeyCode::S) =>{
+                                    self.keyboard_s = false;
+                                },
+                                Some(VirtualKeyCode::A) =>{
+                                    self.keyboard_a = false;
+                                },
+                                Some(VirtualKeyCode::D) =>{
+                                    self.keyboard_d = false;
+                                },
+                                Some(VirtualKeyCode::Space) =>{
+                                    if self.in_liquid && !self.flying{
+                                        // Space up
+                                        self.keyboard_space = false;
+                                        self.keyboard_ctrl = true;
+                                    }else if self.flying{
+                                        self.keyboard_space = false;
+                                        self.keyboard_ctrl = false;
+                                    }
+                                },
+                                Some(VirtualKeyCode::LControl) =>{
+                                    if self.flying{
+                                        self.keyboard_ctrl = false;
+                                    }
+                                },
+                                _ =>{
+                                    println!("Hello there")
+                                }
                             }
                         }
                     }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::E {
-                        if !self.flying {
-                            self.flying = true;
-                        } else{
-                            self.flying = false;
-                            self.keyboard_ctrl = true;
-                        }
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        if !self.flying{
-                            if self.in_liquid{
-                                self.keyboard_space = true;
-                                self.touched_ground = false;
+                    match input.virtual_keycode{
+                        Some(VirtualKeyCode::W) =>{
+                            self.keyboard_w = false;
+                        },
+                        Some(VirtualKeyCode::S) =>{
+                            self.keyboard_s = false;
+                        },
+                        Some(VirtualKeyCode::A) =>{
+                            self.keyboard_a = false;
+                        },
+                        Some(VirtualKeyCode::D) =>{
+                            self.keyboard_d = false;
+                        },
+                        Some(VirtualKeyCode::Space) =>{
+                            if self.in_liquid && !self.flying{
+                                // Space up
+                                self.keyboard_space = false;
+                                self.keyboard_ctrl = true;
+                            }else if self.flying{
+                                self.keyboard_space = false;
                                 self.keyboard_ctrl = false;
                             }
-                            
-                            if self.touched_ground && !self.in_liquid{
-                                self.keyboard_space = true;
+                        },
+                        Some(VirtualKeyCode::LControl) =>{
+                            if self.flying{
                                 self.keyboard_ctrl = false;
-                                self.touched_ground = false;
-                                self.acceleration_result = 1.5
                             }
-                        }else{
-                            self.keyboard_space = true;
-                        }
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                        if self.flying{
-                            self.keyboard_ctrl = true;
-                        }
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::W {
-                        self.keyboard_w = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::S {
-                        self.keyboard_s = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::A {
-                        self.keyboard_a = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::D {
-                        self.keyboard_d = true;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::F {
-                        world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num1 {
-                        self.selected_block = 0;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num2 {
-                        self.selected_block = 1;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num3 {
-                        self.selected_block = 2;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num4 {
-                        self.selected_block = 3;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num5 {
-                        self.selected_block = 4;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num6 {
-                        self.selected_block = 5;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Num7 {
-                        self.selected_block = 6;
-                    }
-                },
-                sdl2::event::Event::KeyUp { timestamp: _, window_id: _, keycode: _, scancode, keymod: _, repeat: _ } => {
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::W {
-                        self.keyboard_w = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::S {
-                        self.keyboard_s = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::A {
-                        self.keyboard_a = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::D {
-                        self.keyboard_d = false;
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::Space {
-                        if self.in_liquid && !self.flying{
-                            // Space up
-                            self.keyboard_space = false;
-                            self.keyboard_ctrl = true;
-                        }else if self.flying{
-                            self.keyboard_space = false;
-                            self.keyboard_ctrl = false;
-                        }
-                        
-                    }
-                    if scancode.unwrap() == sdl2::keyboard::Scancode::LCtrl {
-                        if self.flying{
-                            self.keyboard_ctrl = false;
+                        },
+                        _ =>{
+                            println!("Hello there")
                         }
                     }
                 },
-                sdl2::event::Event::MouseMotion { timestamp: _, window_id: _, which: _, mousestate: _, x, y, xrel: _, yrel: _ } => {
-                    if self.first_mouse
-                    {
-                        self.last_x = x as f32;
-                        self.last_y = y as f32;
-                        self.first_mouse = false;
+                Event::DeviceEvent { 
+                    device_id, 
+                    event  
+                } =>{
+                    match event{
+                        DeviceEvent::MouseMotion { delta } => {
+                            let x = delta.0;
+                            let y = delta.1;
+
+                            if self.first_mouse{
+                                self.last_x = x as f32;
+                                self.last_y = y as f32;
+                                self.first_mouse = false;
+                            }
+        
+                            let mut xoffset = x as f32 - self.last_x;
+                            let mut yoffset = self.last_y - y as f32; // reversed since y-coordinates go from bottom to top
+                            self.last_x = x as f32;
+                            self.last_y = y as f32;
+        
+                            let sensitivity = 0.1; // change this value to your liking
+                            xoffset *= sensitivity;
+                            yoffset *= sensitivity;
+        
+                            self.yaw += xoffset;
+                            self.pitch += yoffset;
+        
+                            //make sure that when pitch is out of bounds, screen doesn't get flipped
+                            if self.pitch > 95.0 {
+                                self.pitch = 95.0;
+                            }
+                            if self.pitch < -89.0 {
+                                self.pitch = -89.0;
+                            }
+        
+                            let mut front = glm::vec3(0.0, 0.0, 0.0);
+                            front.x = glm::cos(glm::radians(self.yaw)) * glm::cos(glm::radians(self.pitch));
+                            front.y = glm::sin(glm::radians(self.pitch));
+                            front.z = glm::sin(glm::radians(self.yaw)) * glm::cos(glm::radians(self.pitch));
+                            self.camera_front = glm::normalize(front);
+                        },
+                        DeviceEvent::MouseWheel { delta } => {
+                            match delta {
+                                winit::event::MouseScrollDelta::LineDelta(x, y) => {
+                                    if self.fov >= 1.0 && self.fov <= 90.0 {
+                                        self.fov -= y as f32;
+                                    }  
+                                    if  self.fov < 1.0 {
+                                        self.fov = 1.0;
+                                    }   
+                                    if  self.fov > 90.0 {
+                                        self.fov = 90.0;
+                                    }       
+                                }
+                                // winit::event::MouseScrollDelta::PixelDelta(p) => {
+                                //     println!("mouse wheel Pixel Delta: ({},{})", p.x, p.y);
+                                //     let mut pos = window.outer_position().unwrap();
+                                //     pos.x -= p.x as i32;
+                                //     pos.y -= p.y as i32;
+                                //     window.set_outer_position(pos)
+                                // }
+                                _ => {},
+                            }
+                        },
+                        _ =>{}
                     }
-
-                    let mut xoffset = x as f32 - self.last_x;
-                    let mut yoffset = self.last_y - y as f32; // reversed since y-coordinates go from bottom to top
-                    self.last_x = x as f32;
-                    self.last_y = y as f32;
-
-                    let sensitivity = 0.1; // change this value to your liking
-                    xoffset *= sensitivity;
-                    yoffset *= sensitivity;
-
-                    self.yaw += xoffset;
-                    self.pitch += yoffset;
-
-                    //make sure that when pitch is out of bounds, screen doesn't get flipped
-                    if self.pitch > 95.0 {
-                        self.pitch = 95.0;
-                    }
-                    if self.pitch < -89.0 {
-                        self.pitch = -89.0;
-                    }
-
-                    let mut front = glm::vec3(0.0, 0.0, 0.0);
-                    front.x = glm::cos(glm::radians(self.yaw)) * glm::cos(glm::radians(self.pitch));
-                    front.y = glm::sin(glm::radians(self.pitch));
-                    front.z = glm::sin(glm::radians(self.yaw)) * glm::cos(glm::radians(self.pitch));
-                    self.camera_front = glm::normalize(front);
                 },
-                sdl2::event::Event::MouseWheel { timestamp: _, window_id: _, which: _, x: _, y, direction: _ } => {
-                    if self.fov >= 1.0 && self.fov <= 90.0 {
-                        self.fov -= y as f32;
-                    }  
-                    if  self.fov < 1.0 {
-                        self.fov = 1.0;
-                    }   
-                    if  self.fov > 90.0 {
-                        self.fov = 90.0;
-                    }
-                },
-                sdl2::event::Event::MouseButtonDown { timestamp: _, window_id: _, which: _, mouse_btn, clicks: _, x: _, y: _ } =>{
-                    if !self.mouse_button_clicked {
-                        if mouse_btn.eq(&sdl2::mouse::MouseButton::Left){
-                            world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
-                        } else {
-                            world::World::place_block(world, &self.camera_front, &self.camera_pos, self.selected_block, self.player_height);
+                Event::WindowEvent { 
+                    window_id, 
+                    event: WindowEvent::MouseInput { 
+                        device_id, 
+                        state, 
+                        button, 
+                        modifiers }
+                } =>{
+                    match state{
+                        Pressed => {
+                            if !self.mouse_button_clicked {
+                                if button == winit::event::MouseButton::Left{
+                                    world::World::destroy_block(world, &self.camera_front, &self.camera_pos);
+                                } else if button == winit::event::MouseButton::Right{
+                                    world::World::place_block(world, &self.camera_front, &self.camera_pos, self.selected_block, self.player_height);
+                                }
+                                self.mouse_button_clicked = true;
+                            }
+                        },
+                        Released => {
+                            self.mouse_button_clicked = false;
                         }
-                        self.mouse_button_clicked = true;
                     }
                 },
-                sdl2::event::Event::MouseButtonUp { timestamp: _, window_id: _, which: _, mouse_btn: _, clicks: _, x: _, y: _ } =>{
-                    self.mouse_button_clicked = false;
-                },
-                _ => {}
+                _ =>{}
             }
-        }     
+        });
+
+        self.mesh = mesh;
         
         if self.in_liquid{
             self.liquid_speed_modifyer = 0.45;
