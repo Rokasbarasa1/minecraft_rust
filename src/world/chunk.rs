@@ -1,5 +1,4 @@
 extern crate noise;
-use glm::ext::powi;
 use parking_lot::{Mutex};
 use rand::Rng;
 use rand::{SeedableRng};
@@ -12,11 +11,11 @@ pub mod block;
 use std::sync::Arc;
 
 pub struct Chunk {
-    pub position: glm::Vector3<f32>,
+    pub position: [f32;3],
     pub blocks: Vec<Vec<Vec<block::Block>>>,
     pub grid_x: i32,
     pub grid_z: i32,
-    pub vertices: Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>,
+    pub vertices: Vec<([f32;3], [f32;2], f32, f32, bool)>,
 
     pub positions: Vec<f32>,
     pub uvs: Vec<f32>,
@@ -43,7 +42,7 @@ pub struct Chunk {
 }
 
 impl Chunk{
-    pub fn init(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, i: usize, k:usize, grid_x: i32, grid_z: i32, position: glm::Vector3<f32>, square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, chunk_distance: usize) -> Chunk{
+    pub fn init(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, i: usize, k:usize, grid_x: i32, grid_z: i32, position: [f32;3], square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, chunk_distance: usize) -> Chunk{
         let mut blocks: Vec<Vec<Vec<block::Block>>> = vec![];
 
         // Perlin smooth rolling hills
@@ -58,7 +57,7 @@ impl Chunk{
         // Hybrd multi is very extreme. Maybe not use this one
 
         let end_pos = generate_chunk(change_block, i, k, &mut blocks, *square_chunk_width, position, grid_x, grid_z, *world_gen_seed, *mid_height, *underground_height, *sky_height, false, set_blocks, chunk_distance);
-        let position_of_chunk = glm::vec3((position.x + end_pos.x) / 2.0, (position.y + end_pos.y) / 2.0, (position.z + end_pos.z) / 2.0);
+        let position_of_chunk = [(position[0] + end_pos[0]) / 2.0, (position[1] + end_pos[1]) / 2.0, (position[2] + end_pos[2]) / 2.0];
         
         return Chunk{
             position: position_of_chunk,
@@ -95,7 +94,7 @@ impl Chunk{
     pub fn regenerate(&mut self, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, i: usize, k:usize, set_blocks: &mut HashMap<String, u8>){
         let half_chunk_width = self.blocks[0].len() as f32 / 2.0;
 
-        let position = glm::vec3(self.position.x + half_chunk_width - 0.5 , self.position.y, self.position.z + half_chunk_width - 0.5);
+        let position = [self.position[0] + half_chunk_width - 0.5 , self.position[1], self.position[2] + half_chunk_width - 0.5];
         let chunk_length = self.blocks[0].len();
         generate_chunk(change_block, i, k, &mut self.blocks, chunk_length, position, self.grid_x, self.grid_z, self.world_gen_seed, self.mid_height, self.underground_height, self.sky_height, true, set_blocks, self.chunk_distance);
 
@@ -160,23 +159,23 @@ impl Chunk{
         
         for i in 0..self.vertices.len() {
             if self.vertices[i].4 != true{
-                self.positions.push(self.vertices[i].0.x);
-                self.positions.push(self.vertices[i].0.y);
-                self.positions.push(self.vertices[i].0.z);
+                self.positions.push(self.vertices[i].0[0]);
+                self.positions.push(self.vertices[i].0[1]);
+                self.positions.push(self.vertices[i].0[2]);
             }else{
-                self.transparent_positions.push(self.vertices[i].0.x);
-                self.transparent_positions.push(self.vertices[i].0.y);
-                self.transparent_positions.push(self.vertices[i].0.z);
+                self.transparent_positions.push(self.vertices[i].0[0]);
+                self.transparent_positions.push(self.vertices[i].0[1]);
+                self.transparent_positions.push(self.vertices[i].0[2]);
             }
         }
 
         for i in 0..self.vertices.len() {
             if self.vertices[i].4 != true{
-                self.uvs.push(self.vertices[i].1.x);
-                self.uvs.push(self.vertices[i].1.y);
+                self.uvs.push(self.vertices[i].1[0]);
+                self.uvs.push(self.vertices[i].1[1]);
             }else{
-                self.transparent_uvs.push(self.vertices[i].1.x);
-                self.transparent_uvs.push(self.vertices[i].1.y);
+                self.transparent_uvs.push(self.vertices[i].1[0]);
+                self.transparent_uvs.push(self.vertices[i].1[1]);
             } 
         }
 
@@ -231,7 +230,7 @@ fn map_value(value: f64, minimum: u8, maximum: u8) -> i32{
     return ((maximum - minimum) as f64 * value).floor() as i32 + minimum as i32;
 }
 
-fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: glm::Vec3, grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: u8, underground_height: u8, sky_height: u8, overwrite: bool, set_blocks: &mut HashMap<String, u8>, chunk_distance: usize) -> glm::Vec3{
+fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: [f32;3], grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: u8, underground_height: u8, sky_height: u8, overwrite: bool, set_blocks: &mut HashMap<String, u8>, chunk_distance: usize) -> [f32;3]{
     let mut stopwatch = stopwatch::Stopwatch::new();
     stopwatch.start();
 
@@ -255,8 +254,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
             || square_chunk_width == 10 && ( i % 3 == 0 && k % 3 == 0 )
             || square_chunk_width == 16 && ( i % 3 == 0 && k % 3 == 0 ){
 
-                let z = position.z - 1.0 * i as f32;
-                let x = position.x - 1.0 * k as f32;
+                let z = position[2] - 1.0 * i as f32;
+                let x = position[0] - 1.0 * k as f32;
                 
                 let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
                 // 0 normal 
@@ -288,7 +287,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     fbm.lacunarity = 2.0;
 
                     let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                    max= map_value(powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
+                    max= map_value(f64::powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
                     type_biome = 1
                 }else {
                     fbm.octaves = 6;
@@ -296,7 +295,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     fbm.lacunarity = 2.0;
 
                     let value_fbm = (fbm.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
-                    max= map_value(powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
+                    max= map_value(f64::powi(value_fbm,3), 0, mid_height) as u8 + underground_height;
                     type_biome = 0
                 }
                 let mut has_tree = false;
@@ -324,8 +323,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
         }
         for k in 0..square_chunk_width {
             if collumns[i][k].0 == 0{
-                let z = position.z - 1.0 * i as f32;
-                let x = position.x - 1.0 * k as f32;
+                let z = position[2] - 1.0 * i as f32;
+                let x = position[0] - 1.0 * k as f32;
                 
                 let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
                 // 0 normal 
@@ -382,8 +381,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     for k in 0..square_chunk_width{
         for i in 0..square_chunk_width {
             if coll_temp[i][k].0 == 0{
-                let z = position.z - 1.0 * i as f32;
-                let x = position.x - 1.0 * k as f32;
+                let z = position[2] - 1.0 * i as f32;
+                let x = position[0] - 1.0 * k as f32;
                 
                 let value_worley = (worley.get([(z as f64 + grid_z as f64), (x as f64 + grid_x as f64)]) + 1.0)/2.0;
                 // 0 normal 
@@ -444,7 +443,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 blocks[i].push(row);
 
                 for _j in 0..(mid_height + underground_height + sky_height) as usize{
-                    blocks[i][k].push(block::Block::init(glm::vec3(0.0, 0.0, 0.0), 1));
+                    blocks[i][k].push(block::Block::init([0.0, 0.0, 0.0], 1));
                 }
             }
         }
@@ -468,7 +467,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     number = get_block_type(j as u8, underground_height + collumn_values.0, water_level, collumn_values.1, underground_height, sky_height, mid_height + underground_height + sky_height, collumn_values.4);
                 }
                 
-                val[k as usize][j as usize].regenerate(glm::vec3(collumn_values.3, position.y + 1.0 * j as f32, collumn_values.2), number);
+                val[k as usize][j as usize].regenerate([collumn_values.3, position[1] + 1.0 * j as f32, collumn_values.2], number);
             }
         }
     });

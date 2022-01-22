@@ -1,6 +1,8 @@
 extern crate image;
 extern crate noise;
 extern crate stopwatch;
+extern crate glium;
+
 use crate::render_gl;
 pub mod chunk;
 pub mod block_model;
@@ -29,14 +31,14 @@ pub struct World {
 
 impl World{
 
-    pub fn new(camera_position: &glm::Vector3<f32>, program: &render_gl::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8) -> World{
+    pub fn new(camera_position: &[f32;3], program: glium::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
             loaded_textures: 0,
             chunk_grid: vec![],
             block_model: block_model::BlockModel::init(),
             view_distance: ((chunks_layers_from_player - 1) / 2 * square_chunk_width + square_chunk_width) as f32,
-            program: program.clone(),
+            program: program,
             square_chunk_width: square_chunk_width.clone(),
             unbuilt_models: vec![],
             set_blocks: HashMap::new(),
@@ -106,7 +108,7 @@ impl World{
         }
     }
 
-    pub fn draw(&mut self, camera_pos: &glm::Vector3<f32>, projection: glm::Matrix4<f32>, view: glm::Matrix4<f32>){
+    pub fn draw(&mut self, camera_pos: &[f32;3], projection: glm::Matrix4<f32>, view: glm::Matrix4<f32>){
         for i in 0..self.build_mesh.len(){
             build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
             
@@ -135,8 +137,8 @@ impl World{
                         gl::EnableVertexAttribArray(2);
                         gl::EnableVertexAttribArray(3);
                         gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
-                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
-                        model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
+                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
+                        model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
                         let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
                         gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
                         gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
@@ -166,8 +168,8 @@ impl World{
                         gl::EnableVertexAttribArray(3);
                         gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
             
-                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  glm::vec3(0.0, 0.0, 0.0));
-                        model =  glm::ext::rotate(&model, glm::radians(0.0), glm::vec3(1.0, 0.3, 0.5));
+                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
+                        model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
                         let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
                         gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
                         gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
@@ -294,7 +296,7 @@ impl World{
         }
     }
 
-    pub fn destroy_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>){
+    pub fn destroy_block(&mut self, camera_front: &[f32;3], camera_pos: &[f32;3]){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         while glm::distance(position.clone(), end.clone()) < 6.0 {
             let block_index = get_block(&self, &end);
@@ -316,7 +318,7 @@ impl World{
         }
     }
 
-    pub fn place_block(&mut self, camera_front: &glm::Vector3<f32>, camera_pos: &glm::Vector3<f32>, selected_block: u8, player_height: f32 ){
+    pub fn place_block(&mut self, camera_front: &[f32;3], camera_pos: &[f32;3], selected_block: u8, player_height: f32 ){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
         while glm::distance(position.clone(), end.clone()) < 6.0 {
@@ -352,7 +354,7 @@ impl World{
     // 0 for nothing
     // 1 for liquid
     // 2 solid block
-    pub fn move_to_direction(&self, &desired_position: &glm::Vector3<f32>, player_height: f32, margin_for_player: f32 ) -> usize {
+    pub fn move_to_direction(&self, &desired_position: &[f32;3], player_height: f32, margin_for_player: f32 ) -> usize {
         let mut block_up:usize = 0;
         let mut block_down:usize = 0; 
 
@@ -365,7 +367,7 @@ impl World{
             }
         }
 
-        block_index = get_block_or_water(self, &glm::vec3(desired_position.x, desired_position.y - player_height, desired_position.z), margin_for_player);
+        block_index = get_block_or_water(self, &[desired_position[0], desired_position[1] - player_height, desired_position[2]], margin_for_player);
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
             if self.chunk_grid[block_index.0][block_index.1].blocks[block_index.2][block_index.3][block_index.4].is_water(){
                 block_down = 1;
@@ -394,7 +396,7 @@ impl World{
     // 2 - solid block before
     // 1 - air/no block before
     // 0 - initial passed status
-    pub fn get_spawn_location(&self, camera_pos: &glm::Vector3<f32>, status: usize) -> glm::Vector3<f32>{
+    pub fn get_spawn_location(&self, camera_pos: &[f32;3], status: usize) -> [f32;3]{
         let block_index = get_block_or_air(self, &camera_pos);
 
         if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
@@ -402,47 +404,47 @@ impl World{
             if Block::is_air(&block) {
                 //Go down
                 if status == 2 {
-                    return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+                    return [camera_pos[0], camera_pos[1]+3.0, camera_pos[2]]
                 }else{
-                    self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y-1.0, camera_pos.z), 1 as usize)
+                    self.get_spawn_location([camera_pos[0], camera_pos[1]-1.0, camera_pos[2]], 1 as usize)
                 }
             }else{
                 //Go up
                 if status == 1 {
-                    return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+                    return [camera_pos[0], camera_pos[1]+3.0, camera_pos[2]]
                 }else{
-                    self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y+1.0, camera_pos.z), 2 as usize)
+                    self.get_spawn_location(&[camera_pos[0], camera_pos[1]+1.0, camera_pos[2]], 2 as usize)
                 }
             }
         }else{
             //Go down
             if status == 2 {
-                return glm::vec3(camera_pos.x, camera_pos.y+3.0, camera_pos.z)
+                return [camera_pos[0], camera_pos[1]+3.0, camera_pos[2]]
             }else{
-                self.get_spawn_location(&glm::vec3(camera_pos.x, camera_pos.y-1.0, camera_pos.z), 1 as usize)
+                self.get_spawn_location(&[camera_pos[0], camera_pos[1]-1.0, camera_pos[2]], 1 as usize)
             }
         }
     }
 }
 
-fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<(glm::Vector3<f32>, f32)>{
-    let left: glm::Vector3<f32> = glm::vec3(mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]);
+fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<([f32;3], f32)>{
+    let left: [f32;3] = [mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]];
     let left_distance = mat[3][3] + mat[3][0];
 
-    let right: glm::Vector3<f32> = glm::vec3(mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]);
+    let right: [f32;3] = [mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]];
     let right_distance = mat[3][3] - mat[3][0];
 
-    let mut plains: Vec<(glm::Vector3<f32>, f32)> = vec![];
+    let mut plains: Vec<([f32;3], f32)> = vec![];
 
     plains.push((right, right_distance));
     plains.push((left, left_distance));
     return plains;
 } 
 
-fn chunk_in_frustum(frustum: &Vec<(glm::Vector3<f32>, f32)>, object_position: &glm::Vector3<f32>, radius_of_chunk: f32) -> bool{
+fn chunk_in_frustum(frustum: &Vec<([f32;3], f32)>, object_position: &[f32;3], radius_of_chunk: f32) -> bool{
 
     for i in 0..frustum.len(){
-        if  object_position.x*frustum[i].0.x + object_position.y*frustum[i].0.y + object_position.z*frustum[i].0.z + frustum[i].1 + radius_of_chunk <= 0.0{
+        if  object_position[0]*frustum[i].0[0] + object_position[1]*frustum[i].0[1] + object_position[2]*frustum[i].0[2] + frustum[i].1 + radius_of_chunk <= 0.0{
             return false;
         }
     }
@@ -460,9 +462,9 @@ fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z
     }
 }
 
-fn is_player_in_block_location(world: &World, camera_pos: &glm::Vector3<f32>, player_height: f32,  i: usize, k:usize, j: usize, l: usize, m: usize) -> bool{
+fn is_player_in_block_location(world: &World, camera_pos: &[f32;3], player_height: f32,  i: usize, k:usize, j: usize, l: usize, m: usize) -> bool{
     let block_index_up = get_block_or_air(world, &camera_pos);
-    let block_index_down = get_block_or_air(world, &glm::vec3(camera_pos.x, camera_pos.y - player_height, camera_pos.z));
+    let block_index_down = get_block_or_air(world, &[camera_pos[0], camera_pos[1] - player_height, camera_pos[2]]);
 
     if block_index_up.0 == i && block_index_up.1 == k && block_index_up.2 == j && block_index_up.3 == l && block_index_up.4 == m{
         return true;
@@ -474,7 +476,7 @@ fn is_player_in_block_location(world: &World, camera_pos: &glm::Vector3<f32>, pl
     return false;
 }
 
-fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+fn get_block(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -484,7 +486,7 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
+            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
             let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
             let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
 
@@ -507,9 +509,9 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
                     if world.chunk_grid[index_i][index_k].blocks[j][l][m].visible && world.chunk_grid[index_i][index_k].blocks[j][l][m].id != 3 {
                         let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
                         let distance = glm::distance(position.clone(), end.clone());
-                        let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-                        let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
-                        let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+                        let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+                        let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
+                        let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
 
                         if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
                             index_j = j; 
@@ -527,7 +529,7 @@ fn get_block(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, us
     }
 }
 
-fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player: f32) -> (usize, usize, usize, usize, usize){
+fn get_block_or_water(world: &World, end: &[f32;3], margin_for_player: f32) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -537,7 +539,7 @@ fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player:
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
+            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
             let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
             let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
 
@@ -560,9 +562,9 @@ fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player:
                     if world.chunk_grid[index_i][index_k].blocks[j][l][m].visible || world.chunk_grid[index_i][index_k].blocks[j][l][m].is_water(){
                         let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
                         let distance = glm::distance(position.clone(), end.clone());
-                        let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-                        let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
-                        let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+                        let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+                        let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
+                        let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
 
                         if distance < min && distance_x < 0.5 + margin_for_player && distance_y < 0.5 && distance_z < 0.5 + margin_for_player{
                             index_j = j; 
@@ -580,7 +582,7 @@ fn get_block_or_water(world: &World, end: &glm::Vector3<f32>, margin_for_player:
     }
 }
 
-fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, usize, usize, usize){
+fn get_block_or_air(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
     let mut index_j: usize = 9999; 
@@ -590,9 +592,9 @@ fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, us
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(end.x.clone(), end.z.clone()));
-            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
+            let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+            let distance_y = (f32::powi(position[2] - end[2], 2)).sqrt();
 
             if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
                 min = distance;
@@ -611,9 +613,9 @@ fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, us
                 for m in 0..world.chunk_grid[index_i][index_k].blocks[j][l].len() {
                     let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
                     let distance = glm::distance(position.clone(), end.clone());
-                    let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-                    let distance_y = (f32::powi(position.y - end.y, 2)).sqrt();
-                    let distance_z = (f32::powi(position.z - end.z, 2)).sqrt();
+                    let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+                    let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
+                    let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
 
                     if distance < min && distance_x < 0.5 && distance_y < 0.5 && distance_z < 0.5{
                         index_j = j; 
@@ -630,16 +632,16 @@ fn get_block_or_air(world: &World, end: &glm::Vector3<f32>) -> (usize, usize, us
     }
 }
 
-fn ray_step(end: &mut glm::Vector3<f32>, direction: &glm::Vector3<f32>, scale: f32){
-    let new_end = glm::vec3(end.x, end.y, end.z) + glm::vec3(scale * direction.x, scale * direction.y, scale * direction.z);
-    end.x = new_end.x;
-    end.y = new_end.y;
-    end.z = new_end.z;
+fn ray_step(end: &mut [f32;3], direction: &[f32;3], scale: f32){
+    let new_end = [end[0], end[1], end[2]] + [scale * direction[0], scale * direction[1], scale * direction[2]];
+    end[0] = new_end[0];
+    end[1] = new_end[1];
+    end[2] = new_end[2];
 
 }
 
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &glm::Vector3<f32>, square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8){
+fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &[f32;3], square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
     let mut x_pos = camera_position.x + adjustment;
     let mut z_pos = camera_position.z + adjustment;
@@ -656,7 +658,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usi
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_width{  //X line Go from positive to negative
-            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, glm::vec3(x_pos.clone(), -10.0, z_pos.clone()), square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, chunk_width);
+            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, [x_pos.clone(), -10.0, z_pos.clone()], square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, chunk_width);
             chunk_grid[i].push(chunk);
             x_pos -= *square_chunk_width as f32;
         }
@@ -665,11 +667,11 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usi
     }
 }
 
-fn distance(max_distance: f32, point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32>) -> bool{
+fn distance(max_distance: f32, point1: &[f32;3], point2: &[f32;3]) -> bool{
     return (f32::powi(point1.x.clone() - point2.x.clone(), 2)).sqrt().floor() <= max_distance && (f32::powi(point1.z.clone() - point2.z.clone(), 2)).sqrt().floor() <= max_distance
 }
 
-fn get_direction(point1: &glm::Vector3<f32>, point2: &glm::Vector3<f32>) -> usize{
+fn get_direction(point1: &[f32;3], point2: &[f32;3]) -> usize{
     let mut x_distance = point1.x.clone() - point2.x.clone();
     let mut z_distance = point1.z.clone() - point2.z.clone();
     let mut x_negative: bool = false;

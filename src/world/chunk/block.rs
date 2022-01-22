@@ -1,6 +1,5 @@
 use crate::{world::block_model::BlockModel};
 
-extern crate gl;
 pub enum BlockId{
     
     GRASS = 0,
@@ -11,14 +10,14 @@ pub enum BlockId{
 }
 
 pub struct Block {
-    pub position: glm::Vector3<f32>,
+    pub position: [f32; 3],
     pub id: u8,
     pub visible: bool,
     pub sides: Vec<bool>
 }
 
 impl Block {
-    pub fn init(position: glm::Vector3<f32>, id: u8) -> Block{
+    pub fn init(position: [f32; 3], id: u8) -> Block{
         return Block{
             position,
             id,
@@ -27,7 +26,7 @@ impl Block {
         };
     }
 
-    pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: u8){
+    pub fn regenerate(&mut self, position: [f32; 3], id: u8){
         self.position = position;
         self.id = id;
     }
@@ -36,7 +35,7 @@ impl Block {
         self.visible = false;
     }
 
-    pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>, block_model: &BlockModel){
+    pub fn get_mesh(&self, vertices: &mut Vec<([f32; 3], [f32; 2], f32, f32, bool)>, block_model: &BlockModel){
         if self.visible {
             for i in 0..self.sides.len() {
                 if self.sides[i] == true{
@@ -44,11 +43,11 @@ impl Block {
                         0 => for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_px(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_px(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_px(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_px(block_model, self.id)[n][0] + self.position[0], 
+                                            BlockModel::get_px(block_model, self.id)[n][1] + self.position[1], 
+                                            BlockModel::get_px(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
@@ -59,11 +58,11 @@ impl Block {
                         1 => for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_nx(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_nx(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_nx(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_nx(block_model, self.id)[n][0] + self.position[0], 
+                                            BlockModel::get_nx(block_model, self.id)[n][1] + self.position[1], 
+                                            BlockModel::get_nx(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
@@ -74,11 +73,11 @@ impl Block {
                         2 =>for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_py(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_py(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_py(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_py(block_model, self.id)[n][0] + self.position[0],
+                                            BlockModel::get_py(block_model, self.id)[n][1] + self.position[1],
+                                            BlockModel::get_py(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
@@ -89,11 +88,11 @@ impl Block {
                         3 => for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_ny(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_ny(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_ny(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_ny(block_model, self.id)[n][0] + self.position[0], 
+                                            BlockModel::get_ny(block_model, self.id)[n][1] + self.position[1], 
+                                            BlockModel::get_ny(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
@@ -104,11 +103,11 @@ impl Block {
                         4 => for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_pz(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_pz(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_pz(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_pz(block_model, self.id)[n][0] + self.position[0], 
+                                            BlockModel::get_pz(block_model, self.id)[n][1] + self.position[1], 
+                                            BlockModel::get_pz(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
@@ -119,11 +118,11 @@ impl Block {
                         5 => for n in 0..6{
                                 vertices.push(
                                     (
-                                        glm::vec3(
-                                            BlockModel::get_nz(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_nz(block_model, self.id)[n].y + self.position.y - ((self.is_water()) as i32 as f32 * 0.1), 
-                                            BlockModel::get_nz(block_model, self.id)[n].z + self.position.z
-                                        ),
+                                        [
+                                            BlockModel::get_nz(block_model, self.id)[n][0] + self.position[0], 
+                                            BlockModel::get_nz(block_model, self.id)[n][1] + self.position[1] - ((self.is_water()) as i32 as f32 * 0.1), 
+                                            BlockModel::get_nz(block_model, self.id)[n][2] + self.position[2]
+                                        ],
                                         BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n],
                                         BlockModel::get_brightness(block_model)[i],
                                         if self.is_water(){0.8}else{1.0},
