@@ -2,23 +2,23 @@ extern crate image;
 extern crate noise;
 extern crate stopwatch;
 extern crate glium;
+use std::io::Cursor;
 
-use crate::render_gl;
+// use crate::render_gl;
 pub mod chunk;
 pub mod block_model;
 use self::{block_model::BlockModel, chunk::block};
-use std::{ffi::c_void, u32};
 use block::Block;
 use chunk::Chunk;
+use glium::Surface;
 use std::collections::HashMap;
 
 pub struct World {
     pub chunk_width: usize,
-    pub loaded_textures: gl::types::GLuint,
+    pub loaded_textures: glium::texture::SrgbTexture2d,
     pub chunk_grid: Vec<Vec<Chunk>>,
     pub block_model: BlockModel,
     pub view_distance: f32,
-    pub program: render_gl::Program,
     pub square_chunk_width: usize,
     //Index of i, index of k, check visibility, rebuild the block, rebuilt bool
     pub unbuilt_models: Vec<(usize, usize, bool, bool, bool)>,
@@ -31,14 +31,13 @@ pub struct World {
 
 impl World{
 
-    pub fn new(camera_position: &[f32;3], program: glium::Program, square_chunk_width: &usize, chunks_layers_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8) -> World{
+    pub fn new(display: &glium::Display, camera_position: [f32;3], square_chunk_width: &usize, chunks_layers_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, underground_height: &u8, sky_height: &u8) -> World{
         let mut world = World{
             chunk_width: square_chunk_width.clone(),
-            loaded_textures: 0,
+            loaded_textures: glium::texture::SrgbTexture2d::empty(display, 1, 1).unwrap(),
             chunk_grid: vec![],
             block_model: block_model::BlockModel::init(),
             view_distance: ((chunks_layers_from_player - 1) / 2 * square_chunk_width + square_chunk_width) as f32,
-            program: program,
             square_chunk_width: square_chunk_width.clone(),
             unbuilt_models: vec![],
             set_blocks: HashMap::new(),
@@ -47,17 +46,16 @@ impl World{
         };
 
         //LOAD TEXTURES
-        setup_texture(&mut world);
+        setup_texture(&mut world, display);
         
         //LOAD CHUNKS AROUND PLAYER
-        generate_chunks(&mut world.chunk_grid, &mut world.change_block, camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height);
+        generate_chunks(display, &mut world.chunk_grid, &mut world.change_block, &camera_position, &square_chunk_width, &chunks_layers_from_player, world_gen_seed, mid_height, &mut world.set_blocks, underground_height, sky_height);
 
         //CHECK CHUNK VISIBILITY 
         check_visibility(&mut world);
 
         //BUILD CHUNK MESH 
-        build_mesh(&mut world);
-
+        build_mesh(&mut world, display);
 
 
         return world;
@@ -108,73 +106,82 @@ impl World{
         }
     }
 
-    pub fn draw(&mut self, camera_pos: &[f32;3], projection: glm::Matrix4<f32>, view: glm::Matrix4<f32>){
+    pub fn draw(&mut self, camera_pos: &[f32;3], view: [[f32; 4]; 4], perspective: [[f32; 4]; 4], target: &mut glium::Frame, display: &glium::Display, program: &glium::Program, model: [[f32; 4]; 4]){
         for i in 0..self.build_mesh.len(){
-            build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1);
-            
+            build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1, display);
         }
         self.build_mesh.clear();
 
-        self.program.set_used();
-        unsafe {
-            gl::Enable(gl::CULL_FACE);
-        }
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                .. Default::default()
+            },
+            .. Default::default()
+        };
 
         let mut change_direction: usize = 0;
         
-        let frustum = get_frustum(projection*view);
+        // let frustum = get_frustum(perspective*view);
         // println!("left x:{} y:{} z:{} w:{}", frustum[0].0.x, frustum[0].0.y, frustum[0].0.z, frustum[0].1);
+        let indicies = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
-                if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
-                    self.program.set_used();
-                    let chunk_model = self.chunk_grid[i][k].chunk_model;
-                    unsafe{
-                        gl::BindVertexArray(chunk_model.0);
-                        gl::EnableVertexAttribArray(0);
-                        gl::EnableVertexAttribArray(1);
-                        gl::EnableVertexAttribArray(2);
-                        gl::EnableVertexAttribArray(3);
-                        gl::BindTexture(gl::TEXTURE_2D, chunk_model.0);
-                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
-                        model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
-                        let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                        gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                        gl::DrawArrays(gl::TRIANGLES, 0, chunk_model.1 as i32);
-                    }
-                }
+                // if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
+                    let chunk_model = &self.chunk_grid[i][k].vertex_non_transparent;
+
+                    let uniforms = uniform! {
+                        tex: &self.loaded_textures,
+                        model: model,
+                        view: view,
+                        perspective: perspective
+                    };
+
+                    target.draw(chunk_model, &indicies, program, &uniforms, &Default::default()).unwrap();
+
+                // }
 
                 if change_direction == 0 && self.unbuilt_models.len() == 0 && self.change_block.len() == 0 && !distance(self.view_distance, &camera_pos, &self.chunk_grid[i][k].position){
                     change_direction = get_direction(&camera_pos, &self.chunk_grid[i][k].position);
                 }
             }
         }
-        unsafe {
-            gl::Disable(gl::CULL_FACE);
-        }
+        
 
         //Seperate render call for partialy transparent objects
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
-                if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
-                    self.program.set_used();
-                    let transparent_chunk_model = self.chunk_grid[i][k].transparent_chunk_model;
-                    unsafe{
-                        gl::BindVertexArray(transparent_chunk_model.0);
-                        gl::EnableVertexAttribArray(0);
-                        gl::EnableVertexAttribArray(1);
-                        gl::EnableVertexAttribArray(2);
-                        gl::EnableVertexAttribArray(3);
-                        gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
+                let chunk_model = &self.chunk_grid[i][k].vertex_transparent;
+
+                let uniforms = uniform! {
+                    tex: &self.loaded_textures,
+                    model: model,
+                    view: view,
+                    perspective: perspective
+                };
+
+                target.draw(chunk_model, &indicies, program, &uniforms, &Default::default()).unwrap();
+
+                // if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
+                    // self.program.set_used();
+                //     let transparent_chunk_model = self.chunk_grid[i][k].transparent_chunk_model;
+                //     unsafe{
+                //         gl::BindVertexArray(transparent_chunk_model.0);
+                //         gl::EnableVertexAttribArray(0);
+                //         gl::EnableVertexAttribArray(1);
+                //         gl::EnableVertexAttribArray(2);
+                //         gl::EnableVertexAttribArray(3);
+                //         gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
             
-                        let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
-                        model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
-                        let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                        gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                        gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
-                    }
-                }
+                //         let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
+                //         model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
+                //         let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
+                //         gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
+                //         gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
+                //     }
+                // }
             }
         }
 
@@ -192,7 +199,7 @@ impl World{
                                     for k in 0..length{
                                         let mut new_position = self.chunk_grid[length-1][k].position.clone();
                                         let mut grid = self.chunk_grid[length-1][k].get_grid().clone();
-                                        new_position.z += self.chunk_width as f32;
+                                        new_position[2] += self.chunk_width as f32;
                                         grid.0 -= 1;
                                         
                                         self.chunk_grid[0][k].grid_x = grid.0;
@@ -217,7 +224,7 @@ impl World{
                                     for k in 0..length{
                                         let mut new_position = self.chunk_grid[0][k].position.clone();
                                         let mut grid = self.chunk_grid[0][k].get_grid().clone();
-                                        new_position.z -= self.chunk_width as f32;
+                                        new_position[2] -= self.chunk_width as f32;
                                         grid.0 += 1;
 
                                         self.chunk_grid[length-1][k].grid_x = grid.0;
@@ -245,7 +252,7 @@ impl World{
 
                                     let mut new_position = self.chunk_grid[i][length-1].position.clone();
                                     let mut grid = self.chunk_grid[i][length-1].get_grid().clone();
-                                    new_position.x += self.chunk_width as f32;
+                                    new_position[0] += self.chunk_width as f32;
                                     grid.1 -= 1;
 
                                     self.chunk_grid[i][0].grid_x = grid.0;
@@ -268,7 +275,7 @@ impl World{
 
                                     let mut new_position = self.chunk_grid[i][0].position.clone();
                                     let mut grid = self.chunk_grid[i][0].get_grid().clone();
-                                    new_position.x -= self.chunk_width as f32;
+                                    new_position[0] -= self.chunk_width as f32;
                                     grid.1 += 1; 
 
                                     self.chunk_grid[i][length-1].grid_x = grid.0;
@@ -298,7 +305,7 @@ impl World{
 
     pub fn destroy_block(&mut self, camera_front: &[f32;3], camera_pos: &[f32;3]){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
-        while glm::distance(position.clone(), end.clone()) < 6.0 {
+        while distance_3d(&position.clone(), &end.clone()) < 6.0 {
             let block_index = get_block(&self, &end);
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
                 
@@ -321,7 +328,7 @@ impl World{
     pub fn place_block(&mut self, camera_front: &[f32;3], camera_pos: &[f32;3], selected_block: u8, player_height: f32 ){
         let (position, mut end, direction) = (camera_pos.clone(), camera_pos.clone(), camera_front.clone());
         let mut last_air_block_index: (usize, usize, usize, usize, usize) = (0,0,0,0,0);
-        while glm::distance(position.clone(), end.clone()) < 6.0 {
+        while distance_3d(&position.clone(), &end.clone()) < 6.0 {
             let block_index = get_block_or_air(&self, &end);
             
             if block_index.0 != 9999 && block_index.1 != 9999 && block_index.2 != 9999 && block_index.3 != 9999 && block_index.4 != 9999 {
@@ -406,7 +413,7 @@ impl World{
                 if status == 2 {
                     return [camera_pos[0], camera_pos[1]+3.0, camera_pos[2]]
                 }else{
-                    self.get_spawn_location([camera_pos[0], camera_pos[1]-1.0, camera_pos[2]], 1 as usize)
+                    self.get_spawn_location(&[camera_pos[0], camera_pos[1]-1.0, camera_pos[2]], 1 as usize)
                 }
             }else{
                 //Go up
@@ -427,30 +434,30 @@ impl World{
     }
 }
 
-fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<([f32;3], f32)>{
-    let left: [f32;3] = [mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]];
-    let left_distance = mat[3][3] + mat[3][0];
+// fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<([f32;3], f32)>{
+//     let left: [f32;3] = [mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]];
+//     let left_distance = mat[3][3] + mat[3][0];
 
-    let right: [f32;3] = [mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]];
-    let right_distance = mat[3][3] - mat[3][0];
+//     let right: [f32;3] = [mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]];
+//     let right_distance = mat[3][3] - mat[3][0];
 
-    let mut plains: Vec<([f32;3], f32)> = vec![];
+//     let mut plains: Vec<([f32;3], f32)> = vec![];
 
-    plains.push((right, right_distance));
-    plains.push((left, left_distance));
-    return plains;
-} 
+//     plains.push((right, right_distance));
+//     plains.push((left, left_distance));
+//     return plains;
+// } 
 
-fn chunk_in_frustum(frustum: &Vec<([f32;3], f32)>, object_position: &[f32;3], radius_of_chunk: f32) -> bool{
+// fn chunk_in_frustum(frustum: &Vec<([f32;3], f32)>, object_position: &[f32;3], radius_of_chunk: f32) -> bool{
 
-    for i in 0..frustum.len(){
-        if  object_position[0]*frustum[i].0[0] + object_position[1]*frustum[i].0[1] + object_position[2]*frustum[i].0[2] + frustum[i].1 + radius_of_chunk <= 0.0{
-            return false;
-        }
-    }
+//     for i in 0..frustum.len(){
+//         if  object_position[0]*frustum[i].0[0] + object_position[1]*frustum[i].0[1] + object_position[2]*frustum[i].0[2] + frustum[i].1 + radius_of_chunk <= 0.0{
+//             return false;
+//         }
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: u8){
     let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");
@@ -476,6 +483,15 @@ fn is_player_in_block_location(world: &World, camera_pos: &[f32;3], player_heigh
     return false;
 }
 
+
+fn distance_3d(arr1: &[f32;3], arr2: &[f32;3]) -> f32{
+    (f32::powi(arr1[0] - arr2[0], 2) + f32::powi(arr1[1] - arr2[1], 2) + f32::powi(arr1[2] - arr2[2], 2)).sqrt()
+}
+
+fn distance_2d(arr1: &[f32;2], arr2: &[f32;2]) -> f32{
+    (f32::powi(arr1[0] - arr2[0], 2) + f32::powi(arr1[1] - arr2[1], 2)).sqrt()
+}
+
 fn get_block(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize, usize){
     let mut index_i: usize = 9999;
     let mut index_k: usize = 9999;
@@ -486,9 +502,9 @@ fn get_block(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize, usize
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
-            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+            let distance = distance_2d(&[position[0], position[2]], &[end[0].clone(), end[2].clone()]);
+            let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+            let distance_y = (f32::powi(position[2] - end[2], 2)).sqrt();
 
             if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
                 min = distance;
@@ -508,7 +524,7 @@ fn get_block(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize, usize
                 for m in 0..world.chunk_grid[index_i][index_k].blocks[j][l].len() {
                     if world.chunk_grid[index_i][index_k].blocks[j][l][m].visible && world.chunk_grid[index_i][index_k].blocks[j][l][m].id != 3 {
                         let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
-                        let distance = glm::distance(position.clone(), end.clone());
+                        let distance = distance_3d(&position.clone(), &end.clone());
                         let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
                         let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
                         let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
@@ -539,9 +555,9 @@ fn get_block_or_water(world: &World, end: &[f32;3], margin_for_player: f32) -> (
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
-            let distance_x = (f32::powi(position.x - end.x, 2)).sqrt();
-            let distance_y = (f32::powi(position.z - end.z, 2)).sqrt();
+            let distance = distance_2d(&[position[0], position[2]], &[end[0].clone(), end[2].clone()]);
+            let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
+            let distance_y = (f32::powi(position[2] - end[2], 2)).sqrt();
 
             if distance < min && distance_x < world.chunk_width as f32 / 2.0 && distance_y < world.chunk_width as f32 / 2.0{
                 min = distance;
@@ -561,7 +577,7 @@ fn get_block_or_water(world: &World, end: &[f32;3], margin_for_player: f32) -> (
                 for m in 0..world.chunk_grid[index_i][index_k].blocks[j][l].len() {
                     if world.chunk_grid[index_i][index_k].blocks[j][l][m].visible || world.chunk_grid[index_i][index_k].blocks[j][l][m].is_water(){
                         let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
-                        let distance = glm::distance(position.clone(), end.clone());
+                        let distance = distance_3d(&position.clone(), &end.clone());
                         let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
                         let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
                         let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
@@ -592,7 +608,7 @@ fn get_block_or_air(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize
     for i in 0..world.chunk_grid.len(){
         for k in 0..world.chunk_grid[i].len(){
             let position = world.chunk_grid[i][k].position.clone();
-            let distance = glm::distance([position[0], position[2]], [end[0].clone(), end[2].clone()]);
+            let distance = distance_2d(&[position[0], position[2]], &[end[0].clone(), end[2].clone()]);
             let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
             let distance_y = (f32::powi(position[2] - end[2], 2)).sqrt();
 
@@ -612,7 +628,7 @@ fn get_block_or_air(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize
             for l in 0..world.chunk_grid[index_i][index_k].blocks[j].len() {
                 for m in 0..world.chunk_grid[index_i][index_k].blocks[j][l].len() {
                     let position = world.chunk_grid[index_i][index_k].blocks[j][l][m].position.clone();
-                    let distance = glm::distance(position.clone(), end.clone());
+                    let distance = distance_3d(&position.clone(), &end.clone());
                     let distance_x = (f32::powi(position[0] - end[0], 2)).sqrt();
                     let distance_y = (f32::powi(position[1] - end[1], 2)).sqrt();
                     let distance_z = (f32::powi(position[2] - end[2], 2)).sqrt();
@@ -633,18 +649,29 @@ fn get_block_or_air(world: &World, end: &[f32;3]) -> (usize, usize, usize, usize
 }
 
 fn ray_step(end: &mut [f32;3], direction: &[f32;3], scale: f32){
-    let new_end = [end[0], end[1], end[2]] + [scale * direction[0], scale * direction[1], scale * direction[2]];
+    let new_end = add([end[0], end[1], end[2]], [scale * direction[0], scale * direction[1], scale * direction[2]]);
     end[0] = new_end[0];
     end[1] = new_end[1];
     end[2] = new_end[2];
 
 }
 
+fn add(arr1: [f32; 3], arr2: [f32; 3]) -> [f32; 3] {
+    //Add two vectors
+    let mut result: [f32; 3] = [0.0,0.0,0.0];
 
-fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &[f32;3], square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8){
+    result[0] = arr1[0] + arr2[0];
+    result[1] = arr1[1] + arr2[1];
+    result[2] = arr1[2] + arr2[2];
+
+    result
+}
+
+
+fn generate_chunks(display: &glium::Display, chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, camera_position: &[f32;3], square_chunk_width: &usize, render_out_from_player: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8){
     let adjustment = (*render_out_from_player as f32 / 2.0).floor() as f32 * square_chunk_width.clone() as f32 + (*square_chunk_width as f32 / 2.0);
-    let mut x_pos = camera_position.x + adjustment;
-    let mut z_pos = camera_position.z + adjustment;
+    let mut x_pos = camera_position[0] + adjustment;
+    let mut z_pos = camera_position[2] + adjustment;
     let x_pos_temp = z_pos;
 
     let chunk_width;
@@ -658,7 +685,7 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usi
         let collumn: Vec<chunk::Chunk> = vec![];
         chunk_grid.push(collumn);
         for k in 0..chunk_width{  //X line Go from positive to negative
-            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, [x_pos.clone(), -10.0, z_pos.clone()], square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, chunk_width);
+            let chunk = chunk::Chunk::init(change_block, i, k, i as i32, k as i32, [x_pos.clone(), -10.0, z_pos.clone()], square_chunk_width, world_gen_seed, mid_height, set_blocks, underground_height, sky_height, chunk_width, display);
             chunk_grid[i].push(chunk);
             x_pos -= *square_chunk_width as f32;
         }
@@ -668,12 +695,12 @@ fn generate_chunks(chunk_grid: &mut Vec<Vec<Chunk>>, change_block: &mut Vec<(usi
 }
 
 fn distance(max_distance: f32, point1: &[f32;3], point2: &[f32;3]) -> bool{
-    return (f32::powi(point1.x.clone() - point2.x.clone(), 2)).sqrt().floor() <= max_distance && (f32::powi(point1.z.clone() - point2.z.clone(), 2)).sqrt().floor() <= max_distance
+    return (f32::powi(point1[0].clone() - point2[0].clone(), 2)).sqrt().floor() <= max_distance && (f32::powi(point1[2].clone() - point2[2].clone(), 2)).sqrt().floor() <= max_distance
 }
 
 fn get_direction(point1: &[f32;3], point2: &[f32;3]) -> usize{
-    let mut x_distance = point1.x.clone() - point2.x.clone();
-    let mut z_distance = point1.z.clone() - point2.z.clone();
+    let mut x_distance = point1[0].clone() - point2[0].clone();
+    let mut z_distance = point1[2].clone() - point2[2].clone();
     let mut x_negative: bool = false;
     let mut z_negative: bool = false;
 
@@ -705,38 +732,13 @@ fn get_direction(point1: &[f32;3], point2: &[f32;3]) -> usize{
     }
 }
 
-fn setup_texture(world: &mut World) {
+fn setup_texture(world: &mut World, display: &glium::Display) {
 
-    let data = image::open(&std::path::Path::new("resources\\TextureTemplate.png")).unwrap().into_rgba8();
-    let mut texture: gl::types::GLuint = 0;
-    
-    unsafe {
-        gl::GenTextures(0, &mut texture);
-        gl::BindTexture(gl::TEXTURE_2D, texture);
+    let image = image::load(Cursor::new(&include_bytes!("../resources/TextureTemplate.png")),image::ImageFormat::Png).unwrap().to_rgba8();
+    let image_dimensions = image.dimensions();
+    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    let texture = glium::texture::SrgbTexture2d::new(display, image).unwrap();
 
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPLACE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT  as i32);
-
-        gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MIN_FILTER, gl::NEAREST  as i32);
-        gl::TexParameteri(gl::TEXTURE_2D,gl::TEXTURE_MAG_FILTER, gl::NEAREST  as i32);
-        //gl::TexEnvf(gl::TEXTURE, gl::TEXTURE_ENV_MODE, gl::MODULATE);
-        let (width ,height) = data.dimensions();
-        
-        let img_ptr: *const c_void = data.as_ptr() as *const c_void;
-        gl::TexImage2D(
-            gl::TEXTURE_2D, 
-            0, 
-            gl::RGBA8 as i32, 
-            width as i32, 
-            height as i32, 
-            0, 
-            gl::RGBA, 
-            gl::UNSIGNED_BYTE, 
-            img_ptr
-        );
-
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-    }   
     world.loaded_textures = texture;
 }
 
@@ -983,138 +985,19 @@ fn check_blocks_around_block(world: &mut World, i: usize, k: usize, j: usize, l:
 }
 
 
-fn build_mesh(world: &mut World){
+fn build_mesh(world: &mut World, display: &glium::Display){
     for i in 0..world.chunk_grid.len() {
         for k in 0..world.chunk_grid[i].len() {
             Chunk::build_mesh(&mut world.chunk_grid[i][k], &world.block_model);
-            Chunk::populate_mesh(&mut world.chunk_grid[i][k]);
-            let raw_model: (gl::types::GLuint, usize) = get_raw_model(world, i.clone(), k.clone()); 
-            let texture_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_model.0, raw_model.1, world.loaded_textures);
-            world.chunk_grid[i][k].chunk_model = texture_model;
-
-            let raw_transparent_model: (gl::types::GLuint, usize) = get_raw_model_transparent(world, i.clone(), k.clone()); 
-            let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
-            world.chunk_grid[i][k].transparent_chunk_model = texture_transparent_model;
+            Chunk::populate_mesh(&mut world.chunk_grid[i][k], display);
         }
     }
 }
 
-fn build_mesh_single(world: &mut World, i: usize, k: usize){
+fn build_mesh_single(world: &mut World, i: usize, k: usize, display: &glium::Display){
     Chunk::build_mesh(&mut world.chunk_grid[i][k], &world.block_model);
-    Chunk::populate_mesh(&mut world.chunk_grid[i][k]);
+    Chunk::populate_mesh(&mut world.chunk_grid[i][k], display);
 
-    let raw_model: (gl::types::GLuint, usize) = get_raw_model(world, i.clone(), k.clone()); 
-    let texture_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_model.0, raw_model.1, world.loaded_textures);
-
-    world.chunk_grid[i][k].chunk_model = texture_model;
-
-    let raw_transparent_model: (gl::types::GLuint, usize) = get_raw_model_transparent(world, i.clone(), k.clone());
-    let texture_transparent_model: (gl::types::GLuint, usize, gl::types::GLuint) = (raw_transparent_model.0, raw_transparent_model.1, world.loaded_textures);
-    world.chunk_grid[i][k].transparent_chunk_model = texture_transparent_model
-}
-
-// Open gl stuff
-fn get_raw_model(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){
-    let vao_id = create_vao();
-    
-    //Vertices
-    let mut vbo_id_vert: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_vert);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_vert);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].positions.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].positions.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 0, 3, gl::FLOAT, gl::FALSE, (3 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //Brightness
-    let mut vbo_id_bright: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_bright);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_bright);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].brightness.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].brightness.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 1, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //UV's
-    let mut vbo_id_tex: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_tex);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_tex);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].uvs.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].uvs.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 2, 2, gl::FLOAT, gl::FALSE, (2 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //Opacity
-    let mut vbo_id_opacity: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_opacity);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_opacity);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].opacity.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].opacity.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 3, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    Chunk::set_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
-    return (vao_id, world.chunk_grid[i][k].opacity.len());
-}
-
-fn get_raw_model_transparent(world: &mut World, i: usize, k: usize) -> (gl::types::GLuint, usize){
-    let vao_id = create_vao();
-    
-    //Vertices
-    let mut vbo_id_vert: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_vert);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_vert);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].transparent_positions.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].transparent_positions.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 0, 3, gl::FLOAT, gl::FALSE, (3 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //Brightness
-    let mut vbo_id_bright: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_bright);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_bright);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].transparent_brightness.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].transparent_brightness.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 1, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //UV's
-    let mut vbo_id_tex: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_tex);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_tex);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].transparent_uvs.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].transparent_uvs.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 2, 2, gl::FLOAT, gl::FALSE, (2 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    //Opacity
-    let mut vbo_id_opacity: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo_id_opacity);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo_id_opacity);
-        gl::BufferData(gl::ARRAY_BUFFER, (world.chunk_grid[i][k].transparent_opacity.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, world.chunk_grid[i][k].transparent_opacity.as_ptr() as *const gl::types::GLvoid, gl::STATIC_DRAW);
-        gl::VertexAttribPointer( 3, 1, gl::FLOAT, gl::FALSE, (1 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-    }
-
-    Chunk::set_transparent_vao_vbo(&mut world.chunk_grid[i][k], vao_id, vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
-    return (vao_id, world.chunk_grid[i][k].transparent_opacity.len());
-}
-
-fn create_vao() -> gl::types::GLuint{
-    let mut vao_id: gl::types::GLuint = 0;
-    unsafe{
-        gl::GenVertexArrays(1, &mut vao_id);
-        gl::BindVertexArray(vao_id);
-    }
-    return vao_id;
 }
 
 fn push_unbuilt_to_start(unbuilt: (usize, usize, bool, bool, bool), vector: &mut Vec<(usize, usize, bool, bool, bool)>){

@@ -1,4 +1,3 @@
-extern crate glm;
 
 pub struct BlockModel{
     px_pos: Vec<[f32;3]>,

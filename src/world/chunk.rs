@@ -15,23 +15,26 @@ pub struct Chunk {
     pub blocks: Vec<Vec<Vec<block::Block>>>,
     pub grid_x: i32,
     pub grid_z: i32,
-    pub vertices: Vec<([f32;3], [f32;2], f32, f32, bool)>,
+    pub vertices: Vec<block::Vertex>,
+    pub transparencies: Vec<bool>,
+    pub vertex_non_transparent: glium::VertexBuffer<block::Vertex>,
+    pub vertex_transparent: glium::VertexBuffer<block::Vertex>,
 
-    pub positions: Vec<f32>,
-    pub uvs: Vec<f32>,
-    pub brightness: Vec<f32>,
-    pub opacity: Vec<f32>,
-    pub vao: gl::types::GLuint,
-    pub vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    pub chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+    // pub positions: Vec<f32>,
+    // pub uvs: Vec<f32>,
+    // pub brightness: Vec<f32>,
+    // pub opacity: Vec<f32>,
+    // pub vao: gl::types::GLuint,
+    // pub vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    // pub chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 
-    pub transparent_positions: Vec<f32>,
-    pub transparent_uvs: Vec<f32>,
-    pub transparent_brightness: Vec<f32>,
-    pub transparent_opacity: Vec<f32>,
-    pub transparent_vao: gl::types::GLuint,
-    pub transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
+    // pub transparent_positions: Vec<f32>,
+    // pub transparent_uvs: Vec<f32>,
+    // pub transparent_brightness: Vec<f32>,
+    // pub transparent_opacity: Vec<f32>,
+    // pub transparent_vao: gl::types::GLuint,
+    // pub transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
+    // pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
 
     pub world_gen_seed: u32,
     pub underground_height: u8,
@@ -42,7 +45,7 @@ pub struct Chunk {
 }
 
 impl Chunk{
-    pub fn init(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, i: usize, k:usize, grid_x: i32, grid_z: i32, position: [f32;3], square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, chunk_distance: usize) -> Chunk{
+    pub fn init(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, i: usize, k:usize, grid_x: i32, grid_z: i32, position: [f32;3], square_chunk_width: &usize, world_gen_seed: &u32, mid_height: &u8, set_blocks: &mut HashMap<String, u8>, underground_height: &u8, sky_height: &u8, chunk_distance: usize, display: &glium::Display) -> Chunk{
         let mut blocks: Vec<Vec<Vec<block::Block>>> = vec![];
 
         // Perlin smooth rolling hills
@@ -58,29 +61,32 @@ impl Chunk{
 
         let end_pos = generate_chunk(change_block, i, k, &mut blocks, *square_chunk_width, position, grid_x, grid_z, *world_gen_seed, *mid_height, *underground_height, *sky_height, false, set_blocks, chunk_distance);
         let position_of_chunk = [(position[0] + end_pos[0]) / 2.0, (position[1] + end_pos[1]) / 2.0, (position[2] + end_pos[2]) / 2.0];
-        
+        let vbo = glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap();
         return Chunk{
             position: position_of_chunk,
             blocks,
             grid_x,
             grid_z,
             vertices:  vec![],
+            transparencies: vec![],
+            vertex_non_transparent: glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap(),
+            vertex_transparent: glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap(),
             
-            positions:  vec![],
-            uvs:  vec![],
-            brightness: vec![],
-            opacity: vec![],
-            vao: 0,
-            vbos: (0,0,0,0),
-            chunk_model: (0,0,0),
+            // positions:  vec![],
+            // uvs:  vec![],
+            // brightness: vec![],
+            // opacity: vec![],
+            // vao: 0,
+            // vbos: (0,0,0,0),
+            // chunk_model: (0,0,0),
 
-            transparent_positions:  vec![],
-            transparent_uvs:  vec![],
-            transparent_brightness: vec![],
-            transparent_opacity: vec![],
-            transparent_vao: 0,
-            transparent_vbos: (0,0,0,0),
-            transparent_chunk_model: (0,0,0),
+            // transparent_positions:  vec![],
+            // transparent_uvs:  vec![],
+            // transparent_brightness: vec![],
+            // transparent_opacity: vec![],
+            // transparent_vao: 0,
+            // transparent_vbos: (0,0,0,0),
+            // transparent_chunk_model: (0,0,0),
 
             world_gen_seed: *world_gen_seed,
             underground_height: *underground_height,
@@ -105,107 +111,77 @@ impl Chunk{
     }
 
     pub fn build_mesh(&mut self, block_model: &BlockModel) {
-        let mut stopwatch = stopwatch::Stopwatch::new();
-        stopwatch.start();
-        if self.vao != 0 || self.transparent_vao != 0{
-            unsafe {
-                gl::DeleteVertexArrays(1, &self.vao);
-                gl::DeleteVertexArrays(1, &self.transparent_vao);
-            }
-        }
 
-        if self.vbos.0 != 0 || self.vbos.1 != 0 || self.transparent_vbos.0 != 0 && self.transparent_vbos.1 != 0{
-            unsafe {
-                gl::DeleteBuffers(1, &self.vbos.0);
-                gl::DeleteBuffers(1, &self.vbos.1);
-                gl::DeleteBuffers(1, &self.vbos.2);
-                gl::DeleteBuffers(1, &self.vbos.3);
+        // if self.vao != 0 || self.transparent_vao != 0{
+        //     unsafe {
+        //         gl::DeleteVertexArrays(1, &self.vao);
+        //         gl::DeleteVertexArrays(1, &self.transparent_vao);
+        //     }
+        // }
 
-                gl::DeleteBuffers(1, &self.transparent_vbos.0);
-                gl::DeleteBuffers(1, &self.transparent_vbos.1);
-                gl::DeleteBuffers(1, &self.transparent_vbos.2);
-                gl::DeleteBuffers(1, &self.transparent_vbos.3);
-            }
-        }
+        // if self.vbos.0 != 0 || self.vbos.1 != 0 || self.transparent_vbos.0 != 0 && self.transparent_vbos.1 != 0{
+        //     unsafe {
+        //         gl::DeleteBuffers(1, &self.vbos.0);
+        //         gl::DeleteBuffers(1, &self.vbos.1);
+        //         gl::DeleteBuffers(1, &self.vbos.2);
+        //         gl::DeleteBuffers(1, &self.vbos.3);
+
+        //         gl::DeleteBuffers(1, &self.transparent_vbos.0);
+        //         gl::DeleteBuffers(1, &self.transparent_vbos.1);
+        //         gl::DeleteBuffers(1, &self.transparent_vbos.2);
+        //         gl::DeleteBuffers(1, &self.transparent_vbos.3);
+        //     }
+        // }
         self.vertices.clear();
-        self.positions.clear();
-        self.uvs.clear();
-        self.brightness.clear();
-        self.opacity.clear();
-        self.vao = 0;
-        self.vbos = (0,0,0,0);
-        self.chunk_model = (0,0,0);
+        self.transparencies.clear();
+        // self.vertex_transparent;
+        // self.vertex_non_transparent.clear();
 
-        self.transparent_positions.clear();
-        self.transparent_uvs.clear();
-        self.transparent_brightness.clear();
-        self.transparent_opacity.clear();
-        self.transparent_vao = 0;
-        self.transparent_vbos = (0,0,0,0);
-        self.transparent_chunk_model = (0,0,0);
+
+        // self.positions.clear();
+        // self.uvs.clear();
+        // self.brightness.clear();
+        // self.opacity.clear();
+        // self.vao = 0;
+        // self.vbos = (0,0,0,0);
+        // self.chunk_model = (0,0,0);
+
+        // self.transparent_positions.clear();
+        // self.transparent_uvs.clear();
+        // self.transparent_brightness.clear();
+        // self.transparent_opacity.clear();
+        // self.transparent_vao = 0;
+        // self.transparent_vbos = (0,0,0,0);
+        // self.transparent_chunk_model = (0,0,0);
+
         for j in 0..self.blocks[0][0].len() {
             if self.visible_layers[j]{
                 for i in 0..self.blocks.len() {
                     for k in 0..self.blocks[i].len() {
-                        block::Block::get_mesh(&self.blocks[i][k][j], &mut self.vertices, block_model);
+                        block::Block::get_mesh(&self.blocks[i][k][j], &mut self.vertices, block_model, &mut self.transparencies);
                     }
                 }
             }
         }
-        stopwatch.stop();
     }
     
-    pub fn populate_mesh(&mut self){
-        
-        for i in 0..self.vertices.len() {
-            if self.vertices[i].4 != true{
-                self.positions.push(self.vertices[i].0[0]);
-                self.positions.push(self.vertices[i].0[1]);
-                self.positions.push(self.vertices[i].0[2]);
-            }else{
-                self.transparent_positions.push(self.vertices[i].0[0]);
-                self.transparent_positions.push(self.vertices[i].0[1]);
-                self.transparent_positions.push(self.vertices[i].0[2]);
-            }
-        }
+    pub fn populate_mesh(&mut self, display: &glium::Display){
+        let mut non_transparent_vertices: Vec<block::Vertex> = vec![];
+        let mut transparent_vertices: Vec<block::Vertex> = vec![];
+        // non_transparent_vertices.push(block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.0, brightness: 0.0});
+        // non_transparent_vertices.push(block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.0, brightness: 0.0});
 
         for i in 0..self.vertices.len() {
-            if self.vertices[i].4 != true{
-                self.uvs.push(self.vertices[i].1[0]);
-                self.uvs.push(self.vertices[i].1[1]);
+            if self.transparencies[i] != true{
+                non_transparent_vertices.push(self.vertices[i]);
             }else{
-                self.transparent_uvs.push(self.vertices[i].1[0]);
-                self.transparent_uvs.push(self.vertices[i].1[1]);
-            } 
-        }
-
-        for i in 0..self.vertices.len() {
-            if self.vertices[i].4 != true{
-                self.brightness.push(self.vertices[i].2);
-            }else{
-                self.transparent_brightness.push(self.vertices[i].2);
-            }
-        }
-
-        for i in 0..self.vertices.len() {
-            if self.vertices[i].4 != true{
-                self.opacity.push(self.vertices[i].3);
-            }else{
-                self.transparent_opacity.push(self.vertices[i].3);
+                transparent_vertices.push(self.vertices[i]);
             }
         }
         
+        self.vertex_non_transparent = glium::VertexBuffer::new(display, &non_transparent_vertices).unwrap();
+        self.vertex_transparent = glium::VertexBuffer::new(display, &transparent_vertices).unwrap();
         self.vertices.clear();
-    }
-
-    pub fn set_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint, vbo_id_opacity: gl::types::GLuint){
-        self.vao = vao;
-        self.vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
-    }
-
-    pub fn set_transparent_vao_vbo(&mut self, vao: gl::types::GLuint, vbo_id_vert: gl::types::GLuint, vbo_id_tex: gl::types::GLuint, vbo_id_bright: gl::types::GLuint, vbo_id_opacity: gl::types::GLuint){
-        self.transparent_vao = vao;
-        self.transparent_vbos = (vbo_id_vert, vbo_id_tex, vbo_id_bright, vbo_id_opacity);
     }
 
     pub fn set_layer_visibility(&mut self, visible_layers: Vec<bool>){
@@ -299,8 +275,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     type_biome = 0
                 }
                 let mut has_tree = false;
-                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
-                if type_biome != 2 && rng.gen_range(1..50) == 1{
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
+                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
@@ -364,8 +340,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     type_biome = 0
                 }
                 let mut has_tree = false;
-                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
-                if type_biome != 2 && rng.gen_range(1..50) == 1{
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
+                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
@@ -421,8 +397,8 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                     type_biome = 0
                 }
                 let mut has_tree = false;
-                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + powi(x, 2) as u64 +powi(z, 4) as u64);
-                if type_biome != 2 && rng.gen_range(1..50) == 1{
+                let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
+                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
