@@ -23,7 +23,7 @@ impl CameraState {
 
     pub fn new(width: f32, height: f32) -> CameraState {
         CameraState {
-            aspect_ratio: width / height,
+            aspect_ratio: 1024.0 / 768.0,//width / height,
             position: (0.1, 0.1, 1.0),
             direction: (0.0, 0.0, -1.0),
             moving_up: false,
@@ -178,12 +178,22 @@ impl CameraState {
                     None => return,
                 };
                 match key {
-                    glutin::event::VirtualKeyCode::Up => self.moving_up = pressed,
-                    glutin::event::VirtualKeyCode::Down => self.moving_down = pressed,
+                    glutin::event::VirtualKeyCode::Space => self.moving_up = pressed,
+                    glutin::event::VirtualKeyCode::LControl => self.moving_down = pressed,
                     glutin::event::VirtualKeyCode::A => self.moving_left = pressed,
                     glutin::event::VirtualKeyCode::D => self.moving_right = pressed,
                     glutin::event::VirtualKeyCode::W => self.moving_forward = pressed,
                     glutin::event::VirtualKeyCode::S => self.moving_backward = pressed,
+                    glutin::event::VirtualKeyCode::Q => println!("Q pressed"),
+                    glutin::event::VirtualKeyCode::E => println!("E pressed"),
+                    glutin::event::VirtualKeyCode::F => println!("F pressed"),
+                    glutin::event::VirtualKeyCode::Key1 => println!("NUM1 pressed"),
+                    glutin::event::VirtualKeyCode::Key2 => println!("NUM2 pressed"),
+                    glutin::event::VirtualKeyCode::Key3 => println!("NUM3 pressed"),
+                    glutin::event::VirtualKeyCode::Key4 => println!("NUM4 pressed"),
+                    glutin::event::VirtualKeyCode::Key5 => println!("NUM5 pressed"),
+                    glutin::event::VirtualKeyCode::Key6 => println!("NUM6 pressed"),
+                    glutin::event::VirtualKeyCode::Key7 => println!("NUM7 pressed"),
                     _ => (),
                 };
             },

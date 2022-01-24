@@ -2,13 +2,13 @@
 #[allow(unused_imports)]
 extern crate glium;
 mod camera;
-use std::io::Cursor;
 use glium::{glutin, Surface};
+use skybox::Skybox;
 extern crate stopwatch;
 pub mod world;
 pub mod player;
 pub mod skybox; 
-use glium::glutin::event::VirtualKeyCode;
+use std::{thread, time};
 
 //$Env:RUST_BACKTRACE=1
 fn main() {
@@ -16,8 +16,8 @@ fn main() {
     const WINDOW_WIDTH: u32 = 1280;
     const WINDOW_HEIGHT: u32 = 720;
     
-    const SQUARE_CHUNK_WIDTH: usize = 16;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 19;    //Odd numbers ONLYYY
+    const SQUARE_CHUNK_WIDTH: usize = 6;           //Values can be: 4,6,10,16,22,28
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 9;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
@@ -25,20 +25,13 @@ fn main() {
     const SKY_HEIGHT: u8 = 10;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
     const UNDERGROUND_HEIGHT: u8 = 0;            
 
-    let event_loop = glutin::event_loop::EventLoop::new();
-    
+    const TIME_BETWEEN_FRAMES: u64 = 20;
 
+    let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new()
     .with_title(format!("Minecraft RS"));
-    // . with_dimensions(WINDOW_WIDTH, WINDOW_HEIGHT);
-
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
-
-    let image = image::load(Cursor::new(&include_bytes!("../resources/posy.png")),image::ImageFormat::Png).unwrap().to_rgba8();
-    let image_dimensions = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-    let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
 
     let vertex_shader_block = r#"
         #version 140
@@ -58,7 +51,7 @@ fn main() {
             mat4 modelView = view * model;
             v_tex_coords = tex_coords;
             v_opacity = opacity;
-            gl_Position = perspective * modelView * vec4(position, 0.05);
+            gl_Position = perspective * modelView * vec4(position, 1.0);
         }
     "#;
 
@@ -101,51 +94,77 @@ fn main() {
 
     let skybox: skybox::Skybox = skybox::Skybox::new(&display);
 
-    const TIME_BETWEEN_FRAMES: u64 = 20;
     let mut stopwatch = stopwatch::Stopwatch::new();
-
+    println!("READY");
     event_loop.run(move |event, _, control_flow| {
+        *control_flow = glutin::event_loop::ControlFlow::Poll;
+
         stopwatch.reset();
         stopwatch.start();
-        camera.update();
-        if let glutin::event::Event::WindowEvent {
-            event: window_event,
-            ..
-        } = event
-        {
-            camera.process_input(&window_event);
-            match window_event {
-                glutin::event::WindowEvent::CloseRequested => {
-                    *control_flow = glutin::event_loop::ControlFlow::Exit;
-                    return;
+        match event {
+            glutin::event::Event::WindowEvent {event, .. } =>{
+                camera.process_input(&event);
+                match event {
+                    glutin::event::WindowEvent::KeyboardInput { input, .. } => {
+                        let key = match input.virtual_keycode {
+                            Some(key) => key,
+                            None => return,
+                        };
+                        match key {
+                            glutin::event::VirtualKeyCode::Escape => {
+                                *control_flow = glutin::event_loop::ControlFlow::Exit;
+                                return;
+                            },
+                            _ => (),
+                        };
+                    },
+                    glutin::event::WindowEvent::CloseRequested => {
+                        *control_flow = glutin::event_loop::ControlFlow::Exit;
+                        return;
+                    }
+                    _ => (),
                 }
-                _ => (),
-            }
+            },
+            glutin::event::Event::NewEvents(cause) => match cause {
+                glutin::event::StartCause::ResumeTimeReached { .. } => (),
+                glutin::event::StartCause::Init => (),
+                _ => return,
+            },
+            glutin::event::Event::MainEventsCleared => {
+                drawFrame(&display, &mut camera, &skybox, &mut world, &program_block, TIME_BETWEEN_FRAMES, &stopwatch);
+            },            
+            _ => return,
         }
-
-        let mut target = display.draw();
-        target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
-
-        let model = [
-            [0.01, 0.0, 0.0, 0.0],
-            [0.0, 0.01, 0.0, 0.0],
-            [0.0, 0.0, 0.01, 0.0],
-            [0.0, 0.0, 2.0, 1.0f32]
-        ];
-        
-        skybox.draw(&mut target, &display, camera.get_view(), camera.get_perspective());
-
-        world.draw(&camera.get_position(), camera.get_view(), camera.get_perspective(), &mut target, &display, &program_block, model);
-        
-        target.finish().unwrap();
-
-        // world.render_loop();
-        // loop{
-        //     if (stopwatch.elapsed_ms() as u64) < TIME_BETWEEN_FRAMES {
-        //         world.render_loop();
-        //     }else{
-        //         break;
-        //     }
-        // }
     });
+}
+
+fn drawFrame(display: &glium::Display, camera: &mut camera::CameraState, skybox: &skybox::Skybox, world: &mut world::World, program_block: &glium::Program, frame_time: u64, stopwatch: &stopwatch::Stopwatch){
+    camera.update();
+    let mut target = display.draw();
+    target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
+
+    let model = [
+        [0.01, 0.0, 0.0, 0.0],
+        [0.0, 0.01, 0.0, 0.0],
+        [0.0, 0.0, 0.01, 0.0],
+        [0.0, 0.0, 2.0, 1.0f32]
+    ];
+    
+    let view = camera.get_view();
+    let perspective = camera.get_perspective();
+
+    skybox.draw(&mut target, &display, view, perspective);
+
+    world.draw(&camera.get_position(), view, perspective, &mut target, &display, &program_block, model);
+    
+    target.finish().unwrap();
+
+    loop{
+        if (stopwatch.elapsed_ms() as u64) < frame_time {
+            world.render_loop();
+        }else{
+            break;
+        }
+    }
+
 }
