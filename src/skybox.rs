@@ -28,32 +28,32 @@ impl Skybox{
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/sides.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_posx = glium::Texture2d::new(display, image).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/sides.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_negx = glium::Texture2d::new(display, image).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/posy.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_posy = glium::Texture2d::new(display, image).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/negy.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_negy = glium::Texture2d::new(display, image).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/sides.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_posz = glium::Texture2d::new(display, image).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../resources/sides.png")),image::ImageFormat::Png).unwrap().to_rgba8();
         let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+        let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
         let tex_negz = glium::Texture2d::new(display, image).unwrap();
 
         let cubemap = glium::texture::Cubemap::empty(display, 512).unwrap();
@@ -125,11 +125,11 @@ impl Skybox{
 
                 uniform mat4 model;
                 uniform mat4 view;
-                uniform mat4 perspective;
+                uniform mat4 projection;
 
                 void main() {
                     ReflectDir = position;
-                    gl_Position = perspective * view * vec4(position, 0.1);
+                    gl_Position = projection * view * vec4(position, 0.01);
                 }
             ",
             " #version 140
@@ -167,34 +167,35 @@ impl Skybox{
         };
     }
 
-    pub fn draw(&self, target: &mut glium::Frame, display: &glium::Display, view: [[f32; 4]; 4], perspective: [[f32; 4]; 4]){
-        let  framebuffer1 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveX)).unwrap();
-        let  framebuffer2 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeX)).unwrap();
-        let  framebuffer3 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveY)).unwrap();
-        let  framebuffer4 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeY)).unwrap();
-        let  framebuffer5 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveZ)).unwrap();
-        let  framebuffer6 = glium::framebuffer::SimpleFrameBuffer::new(display,
-            self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeZ)).unwrap();
+    pub fn draw(&self, target: &mut glium::Frame, display: &glium::Display, view: [[f32; 4]; 4], projection: [[f32; 4]; 4]){
+    
+        {
+            let  framebuffer1 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveX)).unwrap();
+            let  framebuffer2 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeX)).unwrap();
+            let  framebuffer3 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveY)).unwrap();
+            let  framebuffer4 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeY)).unwrap();
+            let  framebuffer5 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::PositiveZ)).unwrap();
+            let  framebuffer6 = glium::framebuffer::SimpleFrameBuffer::new(display,
+                self.cubemap.main_level().image(glium::texture::CubeLayer::NegativeZ)).unwrap();
 
-        self.tex_posx.as_surface().blit_whole_color_to(&framebuffer1, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-        self.tex_negx.as_surface().blit_whole_color_to(&framebuffer2, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-        self.tex_negy.as_surface().blit_whole_color_to(&framebuffer3, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-        self.tex_posy.as_surface().blit_whole_color_to(&framebuffer4, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-        self.tex_posz.as_surface().blit_whole_color_to(&framebuffer5, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-        self.tex_negz.as_surface().blit_whole_color_to(&framebuffer6, &self.dest_rect1,
-                    glium::uniforms::MagnifySamplerFilter::Linear);
-
-        
+            self.tex_posx.as_surface().blit_whole_color_to(&framebuffer1, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+            self.tex_negx.as_surface().blit_whole_color_to(&framebuffer2, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+            self.tex_posy.as_surface().blit_whole_color_to(&framebuffer3, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+            self.tex_negy.as_surface().blit_whole_color_to(&framebuffer4, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+            self.tex_posz.as_surface().blit_whole_color_to(&framebuffer5, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+            self.tex_negz.as_surface().blit_whole_color_to(&framebuffer6, &self.dest_rect1,
+                        glium::uniforms::MagnifySamplerFilter::Linear);
+        }
 
         let params = glium::DrawParameters {
             depth: glium::Depth {
@@ -205,18 +206,20 @@ impl Skybox{
             .. Default::default()
         };
 
+        let view: [[f32;4];4] = [
+            [view[0][0], view[0][1], view[0][2], 0.0],
+            [view[1][0], view[1][1], view[1][2], 0.0],
+            [view[2][0], view[2][1], view[2][2], 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ];
+
         let skybox_uniforms = uniform! {
             view: view,
-            perspective: perspective,
+            projection: projection,
             cubetex: self.cubemap.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
        };
 
-        // target.draw(&self.skybox_vao, &self.skybox_indices, &self.program,
-        //     &skybox_uniforms, &params).unwrap();
-
         target.draw(&self.skybox_vao, &self.skybox_indices, &self.program,
             &skybox_uniforms, &params).unwrap();
-        // target.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniforms,
-        //         &Default::default()).unwrap();
     }
 }

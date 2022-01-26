@@ -48,7 +48,6 @@ impl Block {
     }
 
     pub fn get_mesh(&self, vertices: &mut Vec<Vertex>, block_model: &BlockModel, transparencies: &mut Vec<bool>){
-
         if self.visible {
             for i in 0..self.sides.len() {
                 if self.sides[i] == true{
@@ -99,8 +98,11 @@ impl Block {
                                 transparencies.push(self.is_transparent());
                             },
                         5 => for n in 0..6{
+                                //Special case for water
+                                let mut position_nz = add(BlockModel::get_nz(block_model, self.id)[n], self.position);
+                                position_nz[1] -= (self.is_water()) as i32 as f32 * 0.1;
                                 vertices.push(Vertex { 
-                                    position: add(BlockModel::get_nz(block_model, self.id)[n], self.position), 
+                                    position: position_nz, 
                                     tex_coords: BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n], 
                                     opacity: if self.is_water(){0.8}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]

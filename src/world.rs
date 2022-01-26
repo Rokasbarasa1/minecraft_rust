@@ -106,13 +106,31 @@ impl World{
         }
     }
 
-    pub fn draw(&mut self, camera_pos: &[f32;3], view: [[f32; 4]; 4], perspective: [[f32; 4]; 4], target: &mut glium::Frame, display: &glium::Display, program: &glium::Program, model: [[f32; 4]; 4]){
+    pub fn draw(&mut self, camera_pos: &[f32;3], view: [[f32; 4]; 4], projection: [[f32; 4]; 4], target: &mut glium::Frame, display: &glium::Display, program: &glium::Program, model: [[f32; 4]; 4]){
         for i in 0..self.build_mesh.len(){
             build_mesh_single(self, self.build_mesh[i].0, self.build_mesh[i].1, display);
         }
         self.build_mesh.clear();
 
+
+        let behavior = glium::uniforms::SamplerBehavior {
+            minify_filter: glium::uniforms::MinifySamplerFilter::Nearest,
+            magnify_filter: glium::uniforms::MagnifySamplerFilter::Nearest,
+            ..Default::default()
+        };
+
         let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                .. Default::default()
+            },
+            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+            .. Default::default()
+        };
+
+        let params_transparent = glium::DrawParameters {
+            blend: glium::Blend::alpha_blending(),
             depth: glium::Depth {
                 test: glium::draw_parameters::DepthTest::IfLess,
                 write: true,
@@ -123,7 +141,7 @@ impl World{
 
         let mut change_direction: usize = 0;
         
-        // let frustum = get_frustum(perspective*view);
+        // let frustum = get_frustum(projection*view);
         // println!("left x:{} y:{} z:{} w:{}", frustum[0].0.x, frustum[0].0.y, frustum[0].0.z, frustum[0].1);
         let indicies = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
@@ -133,13 +151,14 @@ impl World{
                     let chunk_model = &self.chunk_grid[i][k].vertex_non_transparent;
 
                     let uniforms = uniform! {
-                        tex: &self.loaded_textures,
+                        tex: glium::uniforms::Sampler(&self.loaded_textures, behavior),
                         model: model,
                         view: view,
-                        perspective: perspective
+                        projection: projection
+
                     };
 
-                    target.draw(chunk_model, &indicies, program, &uniforms, &Default::default()).unwrap();
+                    target.draw(chunk_model, &indicies, program, &uniforms, &params).unwrap();
 
                 // }
 
@@ -156,32 +175,13 @@ impl World{
                 let chunk_model = &self.chunk_grid[i][k].vertex_transparent;
 
                 let uniforms = uniform! {
-                    tex: &self.loaded_textures,
+                    tex: glium::uniforms::Sampler(&self.loaded_textures, behavior),
                     model: model,
                     view: view,
-                    perspective: perspective
+                    projection: projection
                 };
 
-                target.draw(chunk_model, &indicies, program, &uniforms, &Default::default()).unwrap();
-
-                // if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
-                    // self.program.set_used();
-                //     let transparent_chunk_model = self.chunk_grid[i][k].transparent_chunk_model;
-                //     unsafe{
-                //         gl::BindVertexArray(transparent_chunk_model.0);
-                //         gl::EnableVertexAttribArray(0);
-                //         gl::EnableVertexAttribArray(1);
-                //         gl::EnableVertexAttribArray(2);
-                //         gl::EnableVertexAttribArray(3);
-                //         gl::BindTexture(gl::TEXTURE_2D, transparent_chunk_model.0);
-            
-                //         let mut model = glm::ext::translate(&glm::mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0),  [0.0, 0.0, 0.0]);
-                //         model =  glm::ext::rotate(&model, glm::radians(0.0), [1.0, 0.3, 0.5]);
-                //         let model_loc = gl::GetUniformLocation(self.program.id().clone(), "model".as_ptr() as *const std::os::raw::c_char);
-                //         gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model[0][0]);
-                //         gl::DrawArrays(gl::TRIANGLES, 0, transparent_chunk_model.1 as i32);
-                //     }
-                // }
+                target.draw(chunk_model, &indicies, program, &uniforms, &params_transparent).unwrap();
             }
         }
 
@@ -734,9 +734,10 @@ fn get_direction(point1: &[f32;3], point2: &[f32;3]) -> usize{
 
 fn setup_texture(world: &mut World, display: &glium::Display) {
 
+    // let image = image::open(&std::path::Path::new("resources\\TextureTemplate.png")).unwrap().into_rgba8();
     let image = image::load(Cursor::new(&include_bytes!("../resources/TextureTemplate.png")),image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    let image = glium::texture::RawImage2d::from_raw_rgba(image.into_raw(), image_dimensions);
     let texture = glium::texture::SrgbTexture2d::new(display, image).unwrap();
 
     world.loaded_textures = texture;

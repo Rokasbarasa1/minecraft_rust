@@ -129,11 +129,11 @@ fn main() {
 
             uniform mat4 model;
             uniform mat4 view;
-            uniform mat4 perspective;
+            uniform mat4 projection;
 
             void main() {
                 ReflectDir = position;
-                gl_Position = perspective * view * model * vec4(position, 1.0);
+                gl_Position = projection * view * model * vec4(position, 1.0);
             }
         ",
         " #version 140
@@ -223,7 +223,7 @@ fn main() {
 
             uniform mat4 model;
             uniform mat4 view;
-            uniform mat4 perspective;
+            uniform mat4 projection;
 
             void main() {
                 mat4 modelviewMatrix = view * model;
@@ -231,7 +231,7 @@ fn main() {
 
                 v_position = modelviewMatrix * vec4(position, 1.0);
                 v_normal = normalMatrix * normal;
-                gl_Position = perspective * v_position;
+                gl_Position = projection * v_position;
             }
         ",
         " #version 140
@@ -311,7 +311,7 @@ fn main() {
         camera.set_position((0.0, 0.0, -8.0));
         camera.set_direction((0.0, 0.0, 1.0));
         let view = camera.get_view();
-        let perspective = camera.get_perspective();
+        let projection = camera.get_projection();
 
         let material_color: [f32; 4] = [0.9, 0.9, 0.9, 1.0];
         let reflect_factor: f32 = 0.9;
@@ -319,7 +319,7 @@ fn main() {
         let skybox_uniforms = uniform! {
              model: model,
              view: view,
-             perspective: perspective,
+             projection: projection,
 	     cubetex: cubemap.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
         };
 
@@ -331,7 +331,7 @@ fn main() {
                   [            0.0,       0.0 ,            0.0, 1.0f32]
              ],
              view: view,
-             perspective: perspective,
+             projection: projection,
              cubetex: cubemap.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
              ReflectFactor: reflect_factor,
              MaterialColor: material_color,
