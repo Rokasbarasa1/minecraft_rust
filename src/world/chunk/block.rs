@@ -1,24 +1,34 @@
 use crate::{world::block_model::BlockModel};
 
-extern crate gl;
-pub enum BlockId{
+// pub enum BlockId{
     
-    GRASS = 0,
-    STONE = 1,
-    DIRT = 2,
-    WATER = 3,
-    AIR = 240,
+//     GRASS = 0,
+//     STONE = 1,
+//     DIRT = 2,
+//     WATER = 3,
+//     AIR = 240,
+// }
+
+#[derive(Copy, Clone)]
+pub struct Vertex {
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
+    pub opacity: f32,
+    pub brightness: f32,
 }
 
+implement_vertex!(Vertex, position, tex_coords, opacity, brightness);
+
 pub struct Block {
-    pub position: glm::Vector3<f32>,
+    pub position: [f32; 3],
     pub id: u8,
     pub visible: bool,
     pub sides: Vec<bool>
 }
 
 impl Block {
-    pub fn init(position: glm::Vector3<f32>, id: u8) -> Block{
+    pub fn init(position: [f32; 3], id: u8) -> Block{
+
         return Block{
             position,
             id,
@@ -27,109 +37,76 @@ impl Block {
         };
     }
 
-    pub fn regenerate(&mut self, position: glm::Vector3<f32>, id: u8){
+    pub fn regenerate(&mut self, position: [f32; 3], id: u8){
         self.position = position;
         self.id = id;
     }
 
-    pub fn set_invisiblie(&mut self){
+    pub fn set_invisible(&mut self){
         self.visible = false;
     }
 
-    pub fn get_mesh(&self, vertices: &mut Vec<(glm::Vec3, glm::Vec2, f32, f32, bool)>, block_model: &BlockModel){
+    pub fn get_mesh(&self, vertices: &mut Vec<Vertex>, block_model: &BlockModel, transparencies: &mut Vec<bool>){
         if self.visible {
             for i in 0..self.sides.len() {
                 if self.sides[i] == true{
                     match i {
                         0 => for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_px(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_px(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_px(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                vertices.push(Vertex { 
+                                    position: add(BlockModel::get_px(block_model, self.id)[n], self.position), 
+                                    tex_coords: BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         1 => for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_nx(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_nx(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_nx(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                vertices.push(Vertex { 
+                                    position: add(BlockModel::get_nx(block_model, self.id)[n], self.position), 
+                                    tex_coords: BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         2 =>for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_py(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_py(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_py(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                vertices.push(Vertex { 
+                                    position: add(BlockModel::get_py(block_model, self.id)[n], self.position), 
+                                    tex_coords: BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         3 => for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_ny(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_ny(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_ny(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                vertices.push(Vertex { 
+                                    position: add(BlockModel::get_ny(block_model, self.id)[n], self.position), 
+                                    tex_coords: BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         4 => for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_pz(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_pz(block_model, self.id)[n].y + self.position.y, 
-                                            BlockModel::get_pz(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                vertices.push(Vertex { 
+                                    position: add(BlockModel::get_pz(block_model, self.id)[n], self.position), 
+                                    tex_coords: BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         5 => for n in 0..6{
-                                vertices.push(
-                                    (
-                                        glm::vec3(
-                                            BlockModel::get_nz(block_model, self.id)[n].x + self.position.x, 
-                                            BlockModel::get_nz(block_model, self.id)[n].y + self.position.y - ((self.is_water()) as i32 as f32 * 0.1), 
-                                            BlockModel::get_nz(block_model, self.id)[n].z + self.position.z
-                                        ),
-                                        BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n],
-                                        BlockModel::get_brightness(block_model)[i],
-                                        if self.is_water(){0.8}else{1.0},
-                                        Block::is_transparent(&self)
-                                    )
-                                )
+                                //Special case for water
+                                let mut position_nz = add(BlockModel::get_nz(block_model, self.id)[n], self.position);
+                                position_nz[1] -= (self.is_water()) as i32 as f32 * 0.1;
+                                vertices.push(Vertex { 
+                                    position: position_nz, 
+                                    tex_coords: BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n], 
+                                    opacity: if self.is_water(){0.9}else{1.0},
+                                    brightness: BlockModel::get_brightness(block_model)[i]
+                                });
+                                transparencies.push(self.is_transparent());
                             },
                         _ => println!("Bad block")
                     }
@@ -153,4 +130,15 @@ impl Block {
             return false;
         }
     }
+}
+
+fn add(arr1: [f32; 3], arr2: [f32; 3]) -> [f32; 3] {
+    //Add two vectors
+    let mut result: [f32; 3] = [0.0,0.0,0.0];
+
+    result[0] = arr1[0] + arr2[0];
+    result[1] = arr1[1] + arr2[1];
+    result[2] = arr1[2] + arr2[2];
+
+    result
 }
