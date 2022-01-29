@@ -64,7 +64,6 @@ impl World{
     //  Make the chunk grid as a variables with ARC<> and then copy the thing when you use it i guess 
     pub fn render_loop(&mut self){
         if self.unbuilt_models.len() != 0 {
-            // println!("Thead unbuilt");
 
             if self.unbuilt_models[0].3 && !self.unbuilt_models[0].4{
                 self.chunk_grid[self.unbuilt_models[0].0][self.unbuilt_models[0].1].regenerate(&mut self.change_block, self.unbuilt_models[0].0, self.unbuilt_models[0].1, &mut self.set_blocks);
@@ -90,7 +89,6 @@ impl World{
 
         // Set any blocks. Mostly leaves
         if self.change_block.len() != 0 && self.unbuilt_models.len() == 0{
-            // println!("Thead change");
 
             for i in 0..self.change_block.len(){                
                 self.chunk_grid[self.change_block[i].0][self.change_block[i].1].blocks[self.change_block[i].2][self.change_block[i].3][self.change_block[i].4].id = self.change_block[i].5;

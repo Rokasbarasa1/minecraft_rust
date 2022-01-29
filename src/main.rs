@@ -16,7 +16,7 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 21;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 15;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
@@ -137,7 +137,6 @@ fn main() {
                     glutin::event::WindowEvent::Resized(dimensions) => {
                         camera.window_width = dimensions.width;
                         camera.window_height = dimensions.height;
-                        // camera.update_screen();
                     }
                     _ => (),
                 }
@@ -175,6 +174,7 @@ fn draw_frame(display: &glium::Display, camera: &mut camera::CameraState, skybox
 
     *time_increment += 0.02;
     
+    world.render_loop();
     loop{
         if (stopwatch.elapsed_ms() as u64) < frame_time {
             world.render_loop();
