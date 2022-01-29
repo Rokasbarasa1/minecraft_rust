@@ -4,12 +4,12 @@ extern crate glium;
 extern crate glm;
 mod camera;
 use glium::{glutin, Surface};
-use skybox::Skybox;
 extern crate stopwatch;
 pub mod world;
 pub mod player;
 pub mod skybox; 
-use glutin::dpi::{self, LogicalPosition, Position};
+use glutin::dpi::{LogicalPosition, Position};
+
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
@@ -17,7 +17,7 @@ fn main() {
     const WINDOW_HEIGHT: u32 = 720;
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 9;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 21;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     const WORLD_GEN_SEED: u32 = 60;                 //Any number
@@ -40,7 +40,7 @@ fn main() {
     let fs = glium::glutin::window::Fullscreen::Borderless(Some(monitor_handle));
     display.gl_window().window().set_fullscreen(Some(fs));
     display.gl_window().window().set_cursor_grab(true);
-    // display.gl_window().window().set_cursor_visible(false);
+    display.gl_window().window().set_cursor_visible(false);
 
     let vertex_shader_block = r#"
         #version 140
@@ -150,6 +150,7 @@ fn main() {
                 _ => return,
             },
             glutin::event::Event::MainEventsCleared => {
+                println!("Event-loop time mid: {0}ms",stopwatch.elapsed_ms());
                 let position = Position::Logical(LogicalPosition::new(camera.window_width as f64  / 2.0, camera.window_height as f64  / 2.0));
                 display.gl_window().window().set_cursor_position(position);
                 draw_frame(&display, &mut camera, &skybox, &mut world, &program_block, TIME_BETWEEN_FRAMES, &stopwatch, &mut time_increment, model);
@@ -196,6 +197,9 @@ fn draw_frame(display: &glium::Display, camera: &mut camera::CameraState, skybox
     target.finish().unwrap();
 
     *time_increment += 0.02;
+    
+    println!("RENDER time END: {0}ms",stopwatch.elapsed_ms());
+
     loop{
         if (stopwatch.elapsed_ms() as u64) < frame_time {
             world.render_loop();

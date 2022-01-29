@@ -97,8 +97,6 @@ impl Chunk{
     pub fn populate_mesh(&mut self, display: &glium::Display){
         let mut non_transparent_vertices: Vec<block::Vertex> = vec![];
         let mut transparent_vertices: Vec<block::Vertex> = vec![];
-        // non_transparent_vertices.push(block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.0, brightness: 0.0});
-        // non_transparent_vertices.push(block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.0, brightness: 0.0});
 
         for i in 0..self.vertices.len() {
             if self.transparencies[i] != true{
@@ -205,7 +203,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 }
                 let mut has_tree = false;
                 let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
-                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
+                if type_biome != 2 && rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
@@ -270,7 +268,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 }
                 let mut has_tree = false;
                 let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
-                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
+                if type_biome != 2 && rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));
@@ -327,7 +325,7 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
                 }
                 let mut has_tree = false;
                 let mut rng = rand_xoshiro::SplitMix64::seed_from_u64(world_gen_seed as u64 + f64::powi(x as f64, 2) as u64 + f64::powi(z as f64, 4) as u64);
-                if type_biome != 2 && false {//rng.gen_range(1..50) == 1{
+                if type_biome != 2 && rng.gen_range(1..50) == 1{
                     has_tree = true;
                     if max > water_level+2{
                         trees.push((grid_x, grid_z, i, k, (max + underground_height + 6) as usize));

@@ -47,22 +47,22 @@ pub struct CameraState {
 
 impl CameraState {
 
-    pub fn new(world: &mut world::World, player_height: f32, camera_pos: [f32;3], WINDOW_WIDTH: u32, WINDOW_HEIGHT: u32) -> CameraState {
+    pub fn new(world: &mut world::World, player_height: f32, camera_pos: [f32;3], window_width: u32, window_height: u32) -> CameraState {
         let mut player = CameraState{
             camera_pos: camera_pos,
             camera_front: [0.0, 0.0, -1.0],
             camera_up: [0.0, 1.0, 0.0],
-            aspect_ratio: WINDOW_WIDTH as f32 / WINDOW_HEIGHT as f32,
-            window_width: WINDOW_WIDTH,
-            window_height: WINDOW_HEIGHT,
+            aspect_ratio: window_width as f32 / window_height as f32,
+            window_width: window_width,
+            window_height: window_height,
 
             yaw: -90.0,
             pitch: 0.0,
-            fov: 90.0,
+            fov: 100.0,
 
             first_mouse: (false,false),
-            last_x: WINDOW_WIDTH as f32 / 2.0,
-            last_y: WINDOW_HEIGHT as f32 / 2.0,
+            last_x: window_width as f32 / 2.0,
+            last_y: window_height as f32 / 2.0,
             
             delta_time: 0.0,
             last_frame: 0.0,
@@ -579,10 +579,6 @@ fn cross(arr1: [f32; 3], arr2: [f32; 3]) -> [f32; 3]{
     let j = arr1[2] * arr2[0] - arr1[0] * arr2[2];
     let k = arr1[0] * arr2[1] - arr1[1] * arr2[0];
 
-    // let i = arr1[1] * arr2[2] - arr1[2] * arr2[1];
-    // let j = arr1[0] * arr2[2] - arr1[2] * arr2[0];
-    // let k = arr1[1] * arr2[0] - arr1[0] * arr2[1];
-
     result[0] = i;
     result[1] = (-1.0) * j;
     result[2] = k;
@@ -626,26 +622,26 @@ fn normalize(arr1: [f32; 3]) -> [f32; 3]{
     result
 }
 
-fn multiply(arr1: [f32; 3], value: f32) -> [f32; 3]{
-    let mut result: [f32; 3] = [0.0,0.0,0.0];
+// fn multiply(arr1: [f32; 3], value: f32) -> [f32; 3]{
+//     let mut result: [f32; 3] = [0.0,0.0,0.0];
 
-    result[0] = arr1[0]/value;
-    result[1] = arr1[1]/value;
-    result[2] = arr1[2]/value;
+//     result[0] = arr1[0]/value;
+//     result[1] = arr1[1]/value;
+//     result[2] = arr1[2]/value;
 
-    result
-}
+//     result
+// }
 
-fn negative(arr1: [f32; 3]) -> [f32; 3]{
-    let mut result: [f32; 3] = [0.0,0.0,0.0];
+// fn negative(arr1: [f32; 3]) -> [f32; 3]{
+//     let mut result: [f32; 3] = [0.0,0.0,0.0];
 
-    result[0] = -arr1[0];
-    result[1] = -arr1[1];
-    result[2] = -arr1[2];
+//     result[0] = -arr1[0];
+//     result[1] = -arr1[1];
+//     result[2] = -arr1[2];
 
-    result
-}
+//     result
+// }
 
-fn dot(arr1: [f32; 3], arr2: [f32; 3]) -> f32{
-    arr1[0]*arr2[0] + arr1[1]*arr2[1] + arr1[2]*arr2[2] 
-}
+// fn dot(arr1: [f32; 3], arr2: [f32; 3]) -> f32{
+//     arr1[0]*arr2[0] + arr1[1]*arr2[1] + arr1[2]*arr2[2] 
+// }
