@@ -56,7 +56,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: add(BlockModel::get_px(block_model, self.id)[n], self.position), 
                                     tex_coords: BlockModel::get_px_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());
@@ -65,7 +65,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: add(BlockModel::get_nx(block_model, self.id)[n], self.position), 
                                     tex_coords: BlockModel::get_nx_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());
@@ -74,7 +74,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: add(BlockModel::get_py(block_model, self.id)[n], self.position), 
                                     tex_coords: BlockModel::get_py_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());
@@ -83,7 +83,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: add(BlockModel::get_ny(block_model, self.id)[n], self.position), 
                                     tex_coords: BlockModel::get_ny_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());
@@ -92,7 +92,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: add(BlockModel::get_pz(block_model, self.id)[n], self.position), 
                                     tex_coords: BlockModel::get_pz_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());
@@ -104,7 +104,7 @@ impl Block {
                                 vertices.push(Vertex { 
                                     position: position_nz, 
                                     tex_coords: BlockModel::get_nz_uv(block_model)[(self.id as usize * 6) + n], 
-                                    opacity: if self.is_water(){0.8}else{1.0},
+                                    opacity: if self.is_water(){0.9}else{1.0},
                                     brightness: BlockModel::get_brightness(block_model)[i]
                                 });
                                 transparencies.push(self.is_transparent());

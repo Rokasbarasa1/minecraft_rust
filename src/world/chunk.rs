@@ -20,22 +20,6 @@ pub struct Chunk {
     pub vertex_non_transparent: glium::VertexBuffer<block::Vertex>,
     pub vertex_transparent: glium::VertexBuffer<block::Vertex>,
 
-    // pub positions: Vec<f32>,
-    // pub uvs: Vec<f32>,
-    // pub brightness: Vec<f32>,
-    // pub opacity: Vec<f32>,
-    // pub vao: gl::types::GLuint,
-    // pub vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    // pub chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
-
-    // pub transparent_positions: Vec<f32>,
-    // pub transparent_uvs: Vec<f32>,
-    // pub transparent_brightness: Vec<f32>,
-    // pub transparent_opacity: Vec<f32>,
-    // pub transparent_vao: gl::types::GLuint,
-    // pub transparent_vbos: (gl::types::GLuint, gl::types::GLuint, gl::types::GLuint, gl::types::GLuint),
-    // pub transparent_chunk_model: (gl::types::GLuint, usize, gl::types::GLuint),
-
     pub world_gen_seed: u32,
     pub underground_height: u8,
     pub sky_height: u8,
@@ -61,7 +45,7 @@ impl Chunk{
 
         let end_pos = generate_chunk(change_block, i, k, &mut blocks, *square_chunk_width, position, grid_x, grid_z, *world_gen_seed, *mid_height, *underground_height, *sky_height, false, set_blocks, chunk_distance);
         let position_of_chunk = [(position[0] + end_pos[0]) / 2.0, (position[1] + end_pos[1]) / 2.0, (position[2] + end_pos[2]) / 2.0];
-        let vbo = glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap();
+
         return Chunk{
             position: position_of_chunk,
             blocks,
@@ -72,22 +56,6 @@ impl Chunk{
             vertex_non_transparent: glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap(),
             vertex_transparent: glium::VertexBuffer::new(display, &[block::Vertex{position: [0.0, 0.0, 0.0], tex_coords: [0.0,0.0], opacity: 0.8, brightness: 0.6}]).unwrap(),
             
-            // positions:  vec![],
-            // uvs:  vec![],
-            // brightness: vec![],
-            // opacity: vec![],
-            // vao: 0,
-            // vbos: (0,0,0,0),
-            // chunk_model: (0,0,0),
-
-            // transparent_positions:  vec![],
-            // transparent_uvs:  vec![],
-            // transparent_brightness: vec![],
-            // transparent_opacity: vec![],
-            // transparent_vao: 0,
-            // transparent_vbos: (0,0,0,0),
-            // transparent_chunk_model: (0,0,0),
-
             world_gen_seed: *world_gen_seed,
             underground_height: *underground_height,
             sky_height: *sky_height,
@@ -112,47 +80,8 @@ impl Chunk{
 
     pub fn build_mesh(&mut self, block_model: &BlockModel) {
 
-        // if self.vao != 0 || self.transparent_vao != 0{
-        //     unsafe {
-        //         gl::DeleteVertexArrays(1, &self.vao);
-        //         gl::DeleteVertexArrays(1, &self.transparent_vao);
-        //     }
-        // }
-
-        // if self.vbos.0 != 0 || self.vbos.1 != 0 || self.transparent_vbos.0 != 0 && self.transparent_vbos.1 != 0{
-        //     unsafe {
-        //         gl::DeleteBuffers(1, &self.vbos.0);
-        //         gl::DeleteBuffers(1, &self.vbos.1);
-        //         gl::DeleteBuffers(1, &self.vbos.2);
-        //         gl::DeleteBuffers(1, &self.vbos.3);
-
-        //         gl::DeleteBuffers(1, &self.transparent_vbos.0);
-        //         gl::DeleteBuffers(1, &self.transparent_vbos.1);
-        //         gl::DeleteBuffers(1, &self.transparent_vbos.2);
-        //         gl::DeleteBuffers(1, &self.transparent_vbos.3);
-        //     }
-        // }
         self.vertices.clear();
         self.transparencies.clear();
-        // self.vertex_transparent;
-        // self.vertex_non_transparent.clear();
-
-
-        // self.positions.clear();
-        // self.uvs.clear();
-        // self.brightness.clear();
-        // self.opacity.clear();
-        // self.vao = 0;
-        // self.vbos = (0,0,0,0);
-        // self.chunk_model = (0,0,0);
-
-        // self.transparent_positions.clear();
-        // self.transparent_uvs.clear();
-        // self.transparent_brightness.clear();
-        // self.transparent_opacity.clear();
-        // self.transparent_vao = 0;
-        // self.transparent_vbos = (0,0,0,0);
-        // self.transparent_chunk_model = (0,0,0);
 
         for j in 0..self.blocks[0][0].len() {
             if self.visible_layers[j]{
