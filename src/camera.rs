@@ -1,5 +1,7 @@
 use glium::glutin;
 use crate::world;
+extern crate glm;
+
 pub struct CameraState {
     pub camera_pos: [f32;3],
     pub camera_front: [f32;3],
@@ -569,6 +571,33 @@ impl CameraState {
                 }
             }
         }
+    }
+
+    pub fn get_view(&self) -> [[f32;4]; 4]{
+        let center = add(self.camera_pos, self.camera_front);
+        let view_temp = glm::ext::look_at(
+            glm::vec3(self.camera_pos[0], self.camera_pos[1], self.camera_pos[2]), 
+            glm::vec3(center[0], center[1], center[2]), 
+            glm::vec3(self.camera_up[0], self.camera_up[1], self.camera_up[2])
+        );
+
+        [
+            [view_temp.c0.x, view_temp.c0.y, view_temp.c0.z, view_temp.c0.w],
+            [view_temp.c1.x, view_temp.c1.y, view_temp.c1.z, view_temp.c1.w],
+            [view_temp.c2.x, view_temp.c2.y, view_temp.c2.z, view_temp.c2.w],
+            [view_temp.c3.x, view_temp.c3.y, view_temp.c3.z, view_temp.c3.w]
+        ]
+    }
+
+    pub fn get_projection(&self) -> [[f32;4]; 4]{
+        let projection_temp = glm::ext::perspective(glm::radians(self.fov), (self.window_width as f32)/(self.window_height as f32), 0.1, 5000.0);
+        
+        [
+            [projection_temp.c0.x, projection_temp.c0.y, projection_temp.c0.z, projection_temp.c0.w],
+            [projection_temp.c1.x, projection_temp.c1.y, projection_temp.c1.z, projection_temp.c1.w],
+            [projection_temp.c2.x, projection_temp.c2.y, projection_temp.c2.z, projection_temp.c2.w],
+            [projection_temp.c3.x, projection_temp.c3.y, projection_temp.c3.z, projection_temp.c3.w]
+        ]
     }
 }
 

@@ -141,26 +141,21 @@ impl World{
 
         let mut change_direction: usize = 0;
         
-        // let frustum = get_frustum(projection*view);
-        // println!("left x:{} y:{} z:{} w:{}", frustum[0].0.x, frustum[0].0.y, frustum[0].0.z, frustum[0].1);
-        let indicies = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+
+        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
         for i in 0..self.chunk_grid.len(){
             for k in 0..self.chunk_grid[i].len(){
-                // if chunk_in_frustum(&frustum, &self.chunk_grid[i][k].position, self.square_chunk_width as f32){
-                    let chunk_model = &self.chunk_grid[i][k].vertex_non_transparent;
+                let chunk_model = &self.chunk_grid[i][k].vertex_non_transparent;
 
-                    let uniforms = uniform! {
-                        tex: glium::uniforms::Sampler(&self.loaded_textures, behavior),
-                        model: model,
-                        view: view,
-                        projection: projection
+                let uniforms = uniform! {
+                    tex: glium::uniforms::Sampler(&self.loaded_textures, behavior),
+                    model: model,
+                    view: view,
+                    projection: projection
+                };
 
-                    };
-
-                    target.draw(chunk_model, &indicies, program, &uniforms, &params).unwrap();
-
-                // }
+                target.draw(chunk_model, &indices, program, &uniforms, &params).unwrap();
 
                 if change_direction == 0 && self.unbuilt_models.len() == 0 && self.change_block.len() == 0 && !distance(self.view_distance, &camera_pos, &self.chunk_grid[i][k].position){
                     change_direction = get_direction(&camera_pos, &self.chunk_grid[i][k].position);
@@ -181,7 +176,7 @@ impl World{
                     projection: projection
                 };
 
-                target.draw(chunk_model, &indicies, program, &uniforms, &params_transparent).unwrap();
+                target.draw(chunk_model, &indices, program, &uniforms, &params_transparent).unwrap();
             }
         }
 
@@ -433,31 +428,6 @@ impl World{
         }
     }
 }
-
-// fn get_frustum(mat: glm::Matrix4<f32>) -> Vec<([f32;3], f32)>{
-//     let left: [f32;3] = [mat[0][3] + mat[0][0], mat[1][3] + mat[1][0], mat[2][3] + mat[2][0]];
-//     let left_distance = mat[3][3] + mat[3][0];
-
-//     let right: [f32;3] = [mat[0][3] - mat[0][0], mat[1][3] - mat[1][0], mat[2][3] - mat[2][0]];
-//     let right_distance = mat[3][3] - mat[3][0];
-
-//     let mut plains: Vec<([f32;3], f32)> = vec![];
-
-//     plains.push((right, right_distance));
-//     plains.push((left, left_distance));
-//     return plains;
-// } 
-
-// fn chunk_in_frustum(frustum: &Vec<([f32;3], f32)>, object_position: &[f32;3], radius_of_chunk: f32) -> bool{
-
-//     for i in 0..frustum.len(){
-//         if  object_position[0]*frustum[i].0[0] + object_position[1]*frustum[i].0[1] + object_position[2]*frustum[i].0[2] + frustum[i].1 + radius_of_chunk <= 0.0{
-//             return false;
-//         }
-//     }
-
-//     return true;
-// }
 
 fn check_and_set_block(set_blocks: &mut HashMap<String, u8>, grid_x: i32, grid_z: i32, i: usize, k: usize, j: usize, id: u8){
     let key = [grid_x.to_string(), grid_z.to_string(), i.to_string(), k.to_string(), j.to_string()].join("");

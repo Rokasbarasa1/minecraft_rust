@@ -1,7 +1,6 @@
 #[macro_use]
 #[allow(unused_imports)]
 extern crate glium;
-extern crate glm;
 mod camera;
 use glium::{glutin, Surface};
 extern crate stopwatch;
@@ -31,7 +30,6 @@ fn main() {
     let wb = glutin::window::WindowBuilder::new()
     .with_title(format!("Minecraft RS"))
     .with_inner_size(glutin::dpi::LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
-    // .grab_cursor(true);
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
  
@@ -150,7 +148,6 @@ fn main() {
                 _ => return,
             },
             glutin::event::Event::MainEventsCleared => {
-                println!("Event-loop time mid: {0}ms",stopwatch.elapsed_ms());
                 let position = Position::Logical(LogicalPosition::new(camera.window_width as f64  / 2.0, camera.window_height as f64  / 2.0));
                 display.gl_window().window().set_cursor_position(position);
                 draw_frame(&display, &mut camera, &skybox, &mut world, &program_block, TIME_BETWEEN_FRAMES, &stopwatch, &mut time_increment, model);
@@ -165,32 +162,12 @@ fn draw_frame(display: &glium::Display, camera: &mut camera::CameraState, skybox
     camera.last_frame = time_increment.clone();
     
     camera.update(world);
-    
+    let view = camera.get_view();
+    let projection = camera.get_projection();
+
     let mut target = display.draw();
     target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
-
-    let center = add(camera.camera_pos, camera.camera_front);
-    let view_temp = glm::ext::look_at(
-        glm::vec3(camera.camera_pos[0], camera.camera_pos[1], camera.camera_pos[2]), 
-        glm::vec3(center[0], center[1], center[2]), 
-        glm::vec3(camera.camera_up[0], camera.camera_up[1], camera.camera_up[2])
-    );
-    let view: [[f32; 4]; 4] = [
-        [view_temp.c0.x, view_temp.c0.y, view_temp.c0.z, view_temp.c0.w],
-        [view_temp.c1.x, view_temp.c1.y, view_temp.c1.z, view_temp.c1.w],
-        [view_temp.c2.x, view_temp.c2.y, view_temp.c2.z, view_temp.c2.w],
-        [view_temp.c3.x, view_temp.c3.y, view_temp.c3.z, view_temp.c3.w]
-    ];
-
-
-    let projection_temp = glm::ext::perspective(glm::radians(camera.fov), (camera.window_width as f32)/(camera.window_height as f32), 0.1, 5000.0);
-    let projection: [[f32; 4]; 4] = [
-        [projection_temp.c0.x, projection_temp.c0.y, projection_temp.c0.z, projection_temp.c0.w],
-        [projection_temp.c1.x, projection_temp.c1.y, projection_temp.c1.z, projection_temp.c1.w],
-        [projection_temp.c2.x, projection_temp.c2.y, projection_temp.c2.z, projection_temp.c2.w],
-        [projection_temp.c3.x, projection_temp.c3.y, projection_temp.c3.z, projection_temp.c3.w]
-    ];
-
+ 
     world.draw(&camera.camera_pos, view, projection, &mut target, &display, &program_block, model);
     skybox.draw(&mut target, &display, view, projection);
 
@@ -198,8 +175,6 @@ fn draw_frame(display: &glium::Display, camera: &mut camera::CameraState, skybox
 
     *time_increment += 0.02;
     
-    println!("RENDER time END: {0}ms",stopwatch.elapsed_ms());
-
     loop{
         if (stopwatch.elapsed_ms() as u64) < frame_time {
             world.render_loop();
@@ -208,14 +183,4 @@ fn draw_frame(display: &glium::Display, camera: &mut camera::CameraState, skybox
             break;
         }
     }
-}
-
-fn add(arr1: [f32; 3], arr2: [f32; 3]) -> [f32; 3] {
-    let mut result: [f32; 3] = [0.0,0.0,0.0];
-
-    result[0] = arr1[0] + arr2[0];
-    result[1] = arr1[1] + arr2[1];
-    result[2] = arr1[2] + arr2[2];
-
-    result
 }

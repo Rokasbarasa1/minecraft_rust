@@ -1,14 +1,13 @@
-#[macro_use]
 use crate::{world::block_model::BlockModel};
 
-pub enum BlockId{
+// pub enum BlockId{
     
-    GRASS = 0,
-    STONE = 1,
-    DIRT = 2,
-    WATER = 3,
-    AIR = 240,
-}
+//     GRASS = 0,
+//     STONE = 1,
+//     DIRT = 2,
+//     WATER = 3,
+//     AIR = 240,
+// }
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
