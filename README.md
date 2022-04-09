@@ -84,9 +84,14 @@ The game now has way less bugs. There are still a lot of very small bugs though.
 
 ![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
 
-Im donne adding things for now. The game of mine is a bit less performance efficient (this could be because user edited blocks are remembered) than similar projects but that is ok for me. I feel like the game is a sligtly enchanced version of the classic minecraft that was on the minecrat.net website in 2011. It has been a very fun project. I will probably come back in a year to put some more imporvements to gameplay on it, small things.
+Im donne adding things for now. The game of mine is a bit less performance efficient than similar projects but that is ok for me. I feel like the game is a sligtly enchanced version of the classic minecraft that was on the minecrat.net website in 2011. It has been a very fun project. I will probably come back in a year to put some more imporvements to gameplay on it, small things.
 
 # 29-01-2022 
 
 Swapped raw Opengl and sdl2 for Glium and Glutin. Raw open gl was broken when compiling in release mode. Glium fixed this by reducing the complexity of opengl setup.
 This change did reduce some performance mostly in draw call, performance in the creation of chunks had a 10 time speed increase when compiled with release. Changes in the future easier and adding of more features much more simple. The program has also been changed to run full screen on startup.
+
+
+# 09-04-2022
+
+Added random seed generation for the map. I tested the game on a ryzen 7 5700U and it really liked having a lot of physical cores to work with, chunks rendered instantly. 

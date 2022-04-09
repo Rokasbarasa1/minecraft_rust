@@ -194,8 +194,6 @@ impl CameraState {
                     },
                     glutin::event::VirtualKeyCode::E => {
                         if pressed{
-                            println!("Flying");
-
                             if !self.flying {
                                 println!("Flying turned on");
                                 self.flying = true;

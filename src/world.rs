@@ -290,9 +290,6 @@ impl World{
                     }
                 }
             }
-            // stopwatch.stop();
-            
-            // println!("Move end ms {}", stopwatch.elapsed_ms());
         }
     }
 
@@ -378,12 +375,10 @@ impl World{
 
 
         if block_up == 1 && block_down == 2{
-            // println!("In water/ on block");
             return 3;
         }else if block_up == 2 || block_down == 2{
             return 2;
         }else if block_up == 1 || block_down == 1{
-            // println!("In water");
             return 1;
         } else {
 

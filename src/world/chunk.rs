@@ -6,7 +6,6 @@ use noise::{Fbm, NoiseFn, Seedable, Worley};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use super::{block_model::BlockModel};
 use std::collections::HashMap;
-extern crate stopwatch;
 pub mod block;
 use std::sync::Arc;
 
@@ -134,9 +133,6 @@ fn map_value(value: f64, minimum: u8, maximum: u8) -> i32{
 }
 
 fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)>, chunk_i: usize, chunk_k:usize, blocks: &mut Vec<Vec<Vec<block::Block>>>, square_chunk_width: usize, position: [f32;3], grid_x: i32, grid_z: i32, world_gen_seed: u32, mid_height: u8, underground_height: u8, sky_height: u8, overwrite: bool, set_blocks: &mut HashMap<String, u8>, chunk_distance: usize) -> [f32;3]{
-    let mut stopwatch = stopwatch::Stopwatch::new();
-    stopwatch.start();
-
     let water_level: u8 = 11 + underground_height;
 
     let set_blocks_arc = Arc::new(Mutex::new(set_blocks));
@@ -378,9 +374,6 @@ fn generate_chunk(change_block: &mut Vec<(usize, usize, usize, usize, usize, u8)
     for i in 0..trees.len(){
         set_tree(change_block, chunk_i, chunk_k, blocks, &mut set_blocks_arc.lock(), trees[i].0, trees[i].1, trees[i].2, trees[i].3, trees[i].4, chunk_distance, (mid_height + underground_height + sky_height) as usize);
     }
-
-    stopwatch.stop();
-    println!("Time ms for chunk: {}", stopwatch.elapsed_ms());
 
     return blocks[blocks.len()-1][blocks[blocks.len()-1].len()-1][0].position.clone();
 }
