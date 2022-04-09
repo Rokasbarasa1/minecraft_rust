@@ -9,6 +9,11 @@ pub mod player;
 pub mod skybox; 
 use glutin::dpi::{LogicalPosition, Position};
 
+extern crate rand_xoshiro;
+use std::time::{SystemTime, UNIX_EPOCH};
+use rand::{SeedableRng};
+use rand::Rng;
+
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
@@ -19,7 +24,16 @@ fn main() {
     const CHUNKS_LAYERS_FROM_PLAYER: usize = 15;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
-    const WORLD_GEN_SEED: u32 = 60;                 //Any number
+    
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    let mut rng = rand_xoshiro::SplitMix64::seed_from_u64((since_the_epoch.as_millis()) as u64);
+    // const WORLD_GEN_SEED: u32 = 60;                 //Any number
+    let WORLD_GEN_SEED: u32 = rng.gen_range(1..999999999);
+
     const MID_HEIGHT: u8 = 50;                   //The terrain variation part
     const SKY_HEIGHT: u8 = 0;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
     const UNDERGROUND_HEIGHT: u8 = 0;            
