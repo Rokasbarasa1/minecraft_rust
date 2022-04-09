@@ -78,3 +78,7 @@ The game now has way less bugs. There are still a lot of very small bugs though.
 ![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
 
 Im donne adding things for now. The game of mine is a bit less performance efficient than similar projects but that is ok for me. I feel like the game is a sligtly enchanced version of the classic minecraft that was on the minecrat.net website in 2011. It has been a very fun project. I will probably come back in a year to put some more imporvements to gameplay on it, small things.
+
+# 09-04-2022
+
+Added random seed generation for the map. I tested the game on a ryzen 7 5700U and it really liked having a lot of physical cores to work with, chunks rendered instantly. 
