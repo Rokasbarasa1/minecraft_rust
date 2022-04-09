@@ -6,7 +6,14 @@ from strach in c using opengl. Looked hard, so i decided to one up and do it in 
 did not know what i was getting myself into. It took 3 weeks to render a cube.
 
 # Setup 
-To make this run on your end you need to follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
+For Glium version:
+
+No setup required.
+
+For raw opengl version:
+
+Follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
+
 # 17-04-2021
 
 Made a rendering system that uses chunks. Chunks have blocks in them. Rn its just static, meaning chunks are not unloaded when far away. But that is going to be the next thing I work on.
@@ -78,6 +85,12 @@ The game now has way less bugs. There are still a lot of very small bugs though.
 ![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
 
 Im donne adding things for now. The game of mine is a bit less performance efficient than similar projects but that is ok for me. I feel like the game is a sligtly enchanced version of the classic minecraft that was on the minecrat.net website in 2011. It has been a very fun project. I will probably come back in a year to put some more imporvements to gameplay on it, small things.
+
+# 29-01-2022 
+
+Swapped raw Opengl and sdl2 for Glium and Glutin. Raw open gl was broken when compiling in release mode. Glium fixed this by reducing the complexity of opengl setup.
+This change did reduce some performance mostly in draw call, performance in the creation of chunks had a 10 time speed increase when compiled with release. Changes in the future easier and adding of more features much more simple. The program has also been changed to run full screen on startup.
+
 
 # 09-04-2022
 
