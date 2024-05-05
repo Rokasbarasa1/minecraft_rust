@@ -2,8 +2,7 @@
 
 Hello, this is my personal project in opengl, recreating main concepts of minecraft in rust. 
 Its hard work. Started on 22-03-2021. Main inspiration was the video how a guy made minecraft 
-from strach in c using opengl. Looked hard, so i decided to one up and do it in rust, i honestly 
-did not know what i was getting myself into. It took 3 weeks to render a cube.
+from strach in c using opengl. Looked hard, so i decided to one up and do it in rust. It was very difficult.
 
 # Setup 
 For Glium version:
@@ -13,6 +12,8 @@ No setup required.
 For raw opengl version:
 
 Follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
+
+
 
 # 17-04-2021
 
@@ -95,3 +96,9 @@ This change did reduce some performance mostly in draw call, performance in the 
 # 09-04-2022
 
 Added random seed generation for the map. I tested the game on a ryzen 7 5700U and it really liked having a lot of physical cores to work with, chunks rendered instantly. 
+
+# 30-04-2024
+
+Recorded a longer video of how the game plays. YT link: https://www.youtube.com/watch?v=750gszmbb3U.
+
+![Hnet-image(2)](./images/screenshot_from_video.png)
