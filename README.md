@@ -5,14 +5,18 @@ Its hard work. Started on 22-03-2021. Main inspiration was the video how a guy m
 from strach in c using opengl. Looked hard, so i decided to one up and do it in rust. It was very difficult.
 
 # Compilation requirements
+
+I have tested this on Windows 10, not Linux or MacOS. I think it should work on all systems though.
+
 ### For Glium version:
 
+- Rust installed
 - MSVC toolchain.
 
 ### For raw opengl version:
 
+- Rust installed
 - MSVC toolchain.
-
 - Follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
 
 # Running it
@@ -20,6 +24,22 @@ from strach in c using opengl. Looked hard, so i decided to one up and do it in 
 1. Run <b>"cargo run --release"</b>
 2. (OPTIONAL) Set how many chunks to render around the player in main.rs "CHUNKS_LAYERS_FROM_PLAYER"
 3. (OPTIONAL)Set how tall the chunks chunks are in main.rs "MID_HEIGHT"
+
+# Controls
+
+- W - Forward
+- A - Strafe left 
+- S - Backwards
+- D - Strafe right
+- E - Enter flight mode like in creative minecraft
+- Space - jump/fly up
+- Left CTRL - fly down
+- Left mouse button - break block
+- Right mouse button - place selected block
+- Numbers row 1 to 7 - Select block to place 
+- ESC - Close the game.
+- F - Break block also (don't remember why i added this)
+- Q - in SDL2 version this turns on the mesh for the blocks to see how they are constructed from polygons.
 
 # 17-04-2021
 
@@ -108,3 +128,7 @@ Added random seed generation for the map. I tested the game on a ryzen 7 5700U a
 Recorded a longer video of how the game plays. YT link: https://www.youtube.com/watch?v=750gszmbb3U.
 
 ![Hnet-image(2)](./images/screenshot_from_video.png)
+
+Also recorded a video messing with the chunk height and amount of chunks around player settings. YT link: https://www.youtube.com/watch?v=PeB86UGiLkw
+
+![Hnet-image(2)](./images/screenshot_from_video_extreme.png)
