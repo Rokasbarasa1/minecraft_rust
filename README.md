@@ -36,7 +36,7 @@ I have tested this on Windows 10, not Linux or MacOS. I think it should work on 
 - Left CTRL - fly down
 - Left mouse button - break block
 - Right mouse button - place selected block
-- Numbers row 1 to 7 - Select block to place 
+- Numbers row 1 to 7 - Select block
 - ESC - Close the game.
 - F - Break block also (don't remember why i added this)
 - Q - in SDL2 version this turns on the mesh for the blocks to see how they are constructed from polygons.
