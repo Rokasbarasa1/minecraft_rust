@@ -8,7 +8,7 @@ from strach in c using opengl. Looked hard, so i decided to one up and do it in 
 
 I have tested this on Windows 10, not Linux or MacOS. I think it should work on all systems though.
 
-### For Glium version:
+### For Glium version (Master branch is the Glium version):
 
 - Rust installed
 - MSVC toolchain.
