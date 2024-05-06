@@ -4,16 +4,22 @@ Hello, this is my personal project in opengl, recreating main concepts of minecr
 Its hard work. Started on 22-03-2021. Main inspiration was the video how a guy made minecraft 
 from strach in c using opengl. Looked hard, so i decided to one up and do it in rust. It was very difficult.
 
-# Setup 
-For Glium version:
+# Compilation requirements
+### For Glium version:
 
-No setup required.
+- MSVC toolchain.
 
-For raw opengl version:
+### For raw opengl version:
 
-Follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
+- MSVC toolchain.
 
+- Follow this tutorial http://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-00-setup.html. It's what i used to set up the opengl environment in Rust. Very important, install sdl2 library on your system the way it is shown in the tutorial on the second page.
 
+# Running it
+
+1. Run <b>"cargo run --release"</b>
+2. (OPTIONAL) Set how many chunks to render around the player in main.rs "CHUNKS_LAYERS_FROM_PLAYER"
+3. (OPTIONAL)Set how tall the chunks chunks are in main.rs "MID_HEIGHT"
 
 # 17-04-2021
 

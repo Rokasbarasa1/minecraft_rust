@@ -17,11 +17,11 @@ use rand::Rng;
 //$Env:RUST_BACKTRACE=1
 fn main() {
     //Settings
-    const WINDOW_WIDTH: u32 = 1280;
-    const WINDOW_HEIGHT: u32 = 720;
+    const WINDOW_WIDTH: u32 = 1280; // For windowed only
+    const WINDOW_HEIGHT: u32 = 720; // For windowed only
     
     const SQUARE_CHUNK_WIDTH: usize = 16;           //Values can be: 4,6,10,16,22,28
-    const CHUNKS_LAYERS_FROM_PLAYER: usize = 15;    //Odd numbers ONLYYY
+    const CHUNKS_LAYERS_FROM_PLAYER: usize = 33;    //Odd numbers ONLYYY
     const PLAYER_HEIGHT: f32 = 1.5;
 
     
@@ -34,7 +34,7 @@ fn main() {
     // const WORLD_GEN_SEED: u32 = 60;                 //Any number
     let WORLD_GEN_SEED: u32 = rng.gen_range(1..999999999);
 
-    const MID_HEIGHT: u8 = 50;                   //The terrain variation part
+    const MID_HEIGHT: u8 = 70;                   //The terrain variation part
     const SKY_HEIGHT: u8 = 0;                   //Works as a buffer for the mid heigt needs to be at least 20 percent of mid size
     const UNDERGROUND_HEIGHT: u8 = 0;            
 
