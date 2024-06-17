@@ -2,8 +2,7 @@
 
 ![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
 
-This is my personal project in opengl, recreating main concepts of minecraft in rust. Main inspiration was the video how a guy made minecraft 
-from scratch in C using OpenGL. Looked hard, so i decided to one up and do it in rust. It was very difficult.
+This is my personal project in OpenGL and Rust. Recreating main concepts of minecraft classic. Main inspiration was the video how a guy made minecraft from scratch in C using OpenGL. Looked hard, so i decided to one up and do it in rust. It was very difficult.
 
 # Compilation requirements
 
