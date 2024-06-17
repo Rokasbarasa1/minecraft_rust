@@ -1,8 +1,10 @@
 # minecraft_rust
 
-Hello, this is my personal project in opengl, recreating main concepts of minecraft in rust. 
+![Hnet-image(2)](https://user-images.githubusercontent.com/50622827/133839528-d6bfd69b-6473-4a57-8859-bdc6185dcaac.gif)
+
+This is my personal project in opengl, recreating main concepts of minecraft in rust. 
 Its hard work. Started on 22-03-2021. Main inspiration was the video how a guy made minecraft 
-from strach in c using opengl. Looked hard, so i decided to one up and do it in rust. It was very difficult.
+from scratch in c using opengl. Looked hard, so i decided to one up and do it in rust. It was very difficult.
 
 # Compilation requirements
 
