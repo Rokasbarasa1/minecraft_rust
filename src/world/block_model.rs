@@ -1,4 +1,5 @@
 
+#[derive(Clone, Default)]
 pub struct BlockModel{
     px_pos: Vec<[f32;3]>,
     nx_pos: Vec<[f32;3]>,
